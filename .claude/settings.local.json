@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(del clipper2_analysis.db)",
+      "Bash(rm:*)"
+    ],
+    "deny": []
+  }
+}
