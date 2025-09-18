@@ -660,6 +660,104 @@ pub fn check_precision_range_simple(precision: &mut i32) {
     check_precision_range(precision, &mut error_code);
 }
 
+/// Calculate the bounding rectangle of a path
+/// Direct port from clipper.core.h line 432
+#[inline]
+pub fn get_bounds_path<T>(path: &Path<T>) -> Rect<T>
+where
+    T: Copy + PartialOrd + num_traits::Bounded + num_traits::Num,
+{
+    let mut xmin = T::max_value();
+    let mut ymin = T::max_value();
+    let mut xmax = T::min_value();
+    let mut ymax = T::min_value();
+    
+    for p in path {
+        if p.x < xmin { xmin = p.x; }
+        if p.x > xmax { xmax = p.x; }
+        if p.y < ymin { ymin = p.y; }
+        if p.y > ymax { ymax = p.y; }
+    }
+    
+    Rect::new(xmin, ymin, xmax, ymax)
+}
+
+/// Calculate the bounding rectangle of multiple paths
+/// Direct port from clipper.core.h line 449
+#[inline]
+pub fn get_bounds_paths<T>(paths: &Paths<T>) -> Rect<T>
+where
+    T: Copy + PartialOrd + num_traits::Bounded + num_traits::Num,
+{
+    let mut xmin = T::max_value();
+    let mut ymin = T::max_value();
+    let mut xmax = T::min_value();
+    let mut ymax = T::min_value();
+    
+    for path in paths {
+        for p in path {
+            if p.x < xmin { xmin = p.x; }
+            if p.x > xmax { xmax = p.x; }
+            if p.y < ymin { ymin = p.y; }
+            if p.y > ymax { ymax = p.y; }
+        }
+    }
+    
+    Rect::new(xmin, ymin, xmax, ymax)
+}
+
+/// Calculate the bounding rectangle of a path with type conversion
+/// Direct port from clipper.core.h line 467
+#[inline]
+pub fn get_bounds_path_convert<T, T2>(path: &Path<T2>) -> Rect<T>
+where
+    T: Copy + PartialOrd + num_traits::Bounded + num_traits::Num,
+    T2: Copy + Into<T>,
+{
+    let mut xmin = T::max_value();
+    let mut ymin = T::max_value();
+    let mut xmax = T::min_value();
+    let mut ymax = T::min_value();
+    
+    for p in path {
+        let x: T = p.x.into();
+        let y: T = p.y.into();
+        if x < xmin { xmin = x; }
+        if x > xmax { xmax = x; }
+        if y < ymin { ymin = y; }
+        if y > ymax { ymax = y; }
+    }
+    
+    Rect::new(xmin, ymin, xmax, ymax)
+}
+
+/// Calculate the bounding rectangle of multiple paths with type conversion
+/// Direct port from clipper.core.h line 484
+#[inline]
+pub fn get_bounds_paths_convert<T, T2>(paths: &Paths<T2>) -> Rect<T>
+where
+    T: Copy + PartialOrd + num_traits::Bounded + num_traits::Num,
+    T2: Copy + Into<T>,
+{
+    let mut xmin = T::max_value();
+    let mut ymin = T::max_value();
+    let mut xmax = T::min_value();
+    let mut ymax = T::min_value();
+    
+    for path in paths {
+        for p in path {
+            let x: T = p.x.into();
+            let y: T = p.y.into();
+            if x < xmin { xmin = x; }
+            if x > xmax { xmax = x; }
+            if y < ymin { ymin = y; }
+            if y > ymax { ymax = y; }
+        }
+    }
+    
+    Rect::new(xmin, ymin, xmax, ymax)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1264,5 +1362,196 @@ mod tests {
         let mut precision = 3;
         check_precision_range_simple(&mut precision);
         assert_eq!(precision, 3); // Should remain unchanged
+    }
+
+    #[test]
+    fn test_get_bounds_path() {
+        // Test basic rectangular path
+        let path: Path64 = vec![
+            Point64::new(10, 20),
+            Point64::new(100, 30),
+            Point64::new(50, 80),
+            Point64::new(0, 10),
+        ];
+        
+        let bounds = get_bounds_path(&path);
+        assert_eq!(bounds.left, 0);
+        assert_eq!(bounds.top, 10);
+        assert_eq!(bounds.right, 100);
+        assert_eq!(bounds.bottom, 80);
+        
+        // Test single point path
+        let single_path: Path64 = vec![Point64::new(42, 37)];
+        let single_bounds = get_bounds_path(&single_path);
+        assert_eq!(single_bounds.left, 42);
+        assert_eq!(single_bounds.top, 37);
+        assert_eq!(single_bounds.right, 42);
+        assert_eq!(single_bounds.bottom, 37);
+        
+        // Test empty path - should return invalid bounds 
+        let empty_path: Path64 = vec![];
+        let empty_bounds = get_bounds_path(&empty_path);
+        assert_eq!(empty_bounds.left, i64::MAX);
+        assert_eq!(empty_bounds.top, i64::MAX);
+        assert_eq!(empty_bounds.right, i64::MIN);
+        assert_eq!(empty_bounds.bottom, i64::MIN);
+    }
+
+    #[test]
+    fn test_get_bounds_path_double() {
+        // Test with floating-point path
+        let path: PathD = vec![
+            PointD::new(10.5, 20.7),
+            PointD::new(100.3, 30.1), 
+            PointD::new(50.9, 80.4),
+            PointD::new(0.2, 10.8),
+        ];
+        
+        let bounds = get_bounds_path(&path);
+        assert_eq!(bounds.left, 0.2);
+        assert_eq!(bounds.top, 10.8);
+        assert_eq!(bounds.right, 100.3);
+        assert_eq!(bounds.bottom, 80.4);
+    }
+
+    #[test]
+    fn test_get_bounds_paths() {
+        // Test multiple paths
+        let paths: Paths64 = vec![
+            vec![
+                Point64::new(0, 0),
+                Point64::new(50, 25),
+            ],
+            vec![
+                Point64::new(25, 50),
+                Point64::new(100, 75),
+            ],
+            vec![
+                Point64::new(-10, -5),
+                Point64::new(30, 40),
+            ],
+        ];
+        
+        let bounds = get_bounds_paths(&paths);
+        assert_eq!(bounds.left, -10);
+        assert_eq!(bounds.top, -5);
+        assert_eq!(bounds.right, 100);
+        assert_eq!(bounds.bottom, 75);
+        
+        // Test empty paths
+        let empty_paths: Paths64 = vec![];
+        let empty_bounds = get_bounds_paths(&empty_paths);
+        assert_eq!(empty_bounds.left, i64::MAX);
+        assert_eq!(empty_bounds.right, i64::MIN);
+        
+        // Test paths with empty paths inside
+        let mixed_paths: Paths64 = vec![
+            vec![Point64::new(10, 20)],
+            vec![], // empty path
+            vec![Point64::new(30, 40)],
+        ];
+        let mixed_bounds = get_bounds_paths(&mixed_paths);
+        assert_eq!(mixed_bounds.left, 10);
+        assert_eq!(mixed_bounds.top, 20);
+        assert_eq!(mixed_bounds.right, 30);
+        assert_eq!(mixed_bounds.bottom, 40);
+    }
+
+    #[test]
+    fn test_get_bounds_path_convert() {
+        // Test converting from i32 path to i64 bounds
+        let path32: Path<i32> = vec![
+            Point::new(10i32, 20i32),
+            Point::new(100i32, 30i32),
+            Point::new(50i32, 80i32),
+        ];
+        
+        let bounds64: Rect64 = get_bounds_path_convert(&path32);
+        assert_eq!(bounds64.left, 10i64);
+        assert_eq!(bounds64.top, 20i64);
+        assert_eq!(bounds64.right, 100i64);
+        assert_eq!(bounds64.bottom, 80i64);
+        
+        // Test converting from f32 path to f64 bounds
+        let pathf32: Path<f32> = vec![
+            Point::new(10.5f32, 20.7f32),
+            Point::new(100.3f32, 30.1f32),
+        ];
+        
+        let boundsf64: RectD = get_bounds_path_convert(&pathf32);
+        // Use a more generous epsilon for f32 to f64 conversion
+        const TOLERANCE: f64 = 1e-6;
+        assert!((boundsf64.left - 10.5).abs() < TOLERANCE);
+        assert!((boundsf64.top - 20.700000762939453).abs() < TOLERANCE); // f32 precision loss
+        assert!((boundsf64.right - 100.30000305175781).abs() < TOLERANCE);
+        assert!((boundsf64.bottom - 30.100000381469727).abs() < TOLERANCE);
+    }
+
+    #[test]
+    fn test_get_bounds_paths_convert() {
+        // Test converting multiple paths
+        let paths32: Paths<i32> = vec![
+            vec![Point::new(10i32, 20i32), Point::new(50i32, 25i32)],
+            vec![Point::new(25i32, 50i32), Point::new(100i32, 75i32)],
+        ];
+        
+        let bounds64: Rect64 = get_bounds_paths_convert(&paths32);
+        assert_eq!(bounds64.left, 10i64);
+        assert_eq!(bounds64.top, 20i64);
+        assert_eq!(bounds64.right, 100i64);
+        assert_eq!(bounds64.bottom, 75i64);
+    }
+
+    #[test]
+    fn test_get_bounds_extreme_values() {
+        // Test with extreme coordinate values
+        let extreme_path: Path64 = vec![
+            Point64::new(i64::MIN + 100, i64::MIN + 200),
+            Point64::new(i64::MAX - 100, i64::MAX - 200),
+            Point64::new(0, 0),
+        ];
+        
+        let bounds = get_bounds_path(&extreme_path);
+        assert_eq!(bounds.left, i64::MIN + 100);
+        assert_eq!(bounds.top, i64::MIN + 200);
+        assert_eq!(bounds.right, i64::MAX - 100);
+        assert_eq!(bounds.bottom, i64::MAX - 200);
+    }
+
+    #[test]
+    fn test_get_bounds_negative_coordinates() {
+        // Test with all negative coordinates
+        let negative_path: Path64 = vec![
+            Point64::new(-100, -200),
+            Point64::new(-50, -150),
+            Point64::new(-75, -175),
+        ];
+        
+        let bounds = get_bounds_path(&negative_path);
+        assert_eq!(bounds.left, -100);
+        assert_eq!(bounds.top, -200);
+        assert_eq!(bounds.right, -50);
+        assert_eq!(bounds.bottom, -150);
+    }
+
+    #[test]
+    fn test_get_bounds_identical_points() {
+        // Test with identical points (degenerate case)
+        let identical_path: Path64 = vec![
+            Point64::new(42, 37),
+            Point64::new(42, 37),
+            Point64::new(42, 37),
+        ];
+        
+        let bounds = get_bounds_path(&identical_path);
+        assert_eq!(bounds.left, 42);
+        assert_eq!(bounds.top, 37);
+        assert_eq!(bounds.right, 42);
+        assert_eq!(bounds.bottom, 37);
+        
+        // Verify it results in a valid zero-area rectangle
+        assert_eq!(bounds.width(), 0);
+        assert_eq!(bounds.height(), 0);
+        assert!(bounds.is_empty()); // Zero-size rectangles are empty when left==right or top==bottom
     }
 }
