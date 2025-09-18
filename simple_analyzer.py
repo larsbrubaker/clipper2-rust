@@ -196,8 +196,14 @@ def main():
     
     print("\n=== ANALYSIS SUMMARY ===")
     
+    # File type breakdown
+    cursor.execute('SELECT file_type, COUNT(*) FROM files GROUP BY file_type ORDER BY COUNT(*) DESC')
+    print("\nFiles by type:")
+    for file_type, count in cursor.fetchall():
+        print(f"  {file_type}: {count} files")
+    
     cursor.execute('SELECT COUNT(*) FROM classes')
-    print(f"Classes/Structs: {cursor.fetchone()[0]}")
+    print(f"\nClasses/Structs: {cursor.fetchone()[0]}")
     
     cursor.execute('SELECT COUNT(*) FROM functions')  
     print(f"Functions: {cursor.fetchone()[0]}")
@@ -205,16 +211,42 @@ def main():
     cursor.execute('SELECT COUNT(*) FROM enums')
     print(f"Enums: {cursor.fetchone()[0]}")
     
-    print("\n=== CLASSES ===")
-    cursor.execute('SELECT name, filepath, is_struct FROM classes ORDER BY name')
-    for name, filepath, is_struct in cursor.fetchall():
+    # Functions by file type
+    print("\nFunctions by file type:")
+    cursor.execute('''
+        SELECT f.file_type, COUNT(fn.id) 
+        FROM files f 
+        LEFT JOIN functions fn ON f.filepath = fn.filepath 
+        GROUP BY f.file_type 
+        ORDER BY COUNT(fn.id) DESC
+    ''')
+    for file_type, count in cursor.fetchall():
+        print(f"  {file_type}: {count} functions")
+    
+    print("\n=== CLASSES BY TYPE ===")
+    cursor.execute('''
+        SELECT c.name, f.file_type, c.is_struct, f.filepath 
+        FROM classes c 
+        JOIN files f ON c.filepath = f.filepath 
+        ORDER BY f.file_type, c.name
+    ''')
+    current_type = None
+    for name, file_type, is_struct, filepath in cursor.fetchall():
+        if file_type != current_type:
+            print(f"\n{file_type.upper()} FILES:")
+            current_type = file_type
         type_str = "struct" if is_struct else "class"
-        print(f"{type_str} {name} - {Path(filepath).name}")
+        print(f"  {type_str} {name} - {Path(filepath).name}")
         
-    print("\n=== KEY FUNCTIONS (first 20) ===")
-    cursor.execute('SELECT name, return_type, filepath FROM functions ORDER BY name LIMIT 20')
-    for name, return_type, filepath in cursor.fetchall():
-        print(f"{return_type} {name}() - {Path(filepath).name}")
+    print("\n=== TEST FILES ===")
+    cursor.execute('SELECT filepath FROM files WHERE file_type = "test" ORDER BY filepath')
+    for (filepath,) in cursor.fetchall():
+        print(f"  {Path(filepath).name}")
+        
+    print("\n=== EXAMPLE FILES ===")
+    cursor.execute('SELECT filepath FROM files WHERE file_type = "example" ORDER BY filepath')
+    for (filepath,) in cursor.fetchall():
+        print(f"  {Path(filepath).name}")
     
     conn.close()
     print(f"\nDatabase saved to: {db_path}")
