@@ -54,6 +54,44 @@ impl Display for Clipper2Exception {
 
 impl std::error::Error for Clipper2Exception {}
 
+/// Handle errors by throwing appropriate exceptions
+/// Direct port from clipper.core.h line 73
+pub fn do_error(error_code: i32) -> Result<(), Clipper2Exception> {
+    use errors::*;
+    
+    match error_code {
+        PRECISION_ERROR_I => Err(Clipper2Exception::new(PRECISION_ERROR)),
+        SCALE_ERROR_I => Err(Clipper2Exception::new(SCALE_ERROR)),
+        NON_PAIR_ERROR_I => Err(Clipper2Exception::new(NON_PAIR_ERROR)),
+        UNDEFINED_ERROR_I => Err(Clipper2Exception::new(UNDEFINED_ERROR)),
+        RANGE_ERROR_I => Err(Clipper2Exception::new(RANGE_ERROR)),
+        _ => Err(Clipper2Exception::new("Unknown error")),
+    }
+}
+
+/// Constants matching C++ implementation
+/// Direct port from clipper.core.h line 55-71
+pub mod constants {
+    /// PI constant
+    pub const PI: f64 = 3.141592653589793238;
+    
+    /// Maximum decimal precision for clipper operations
+    pub const CLIPPER2_MAX_DEC_PRECISION: i32 = 8;
+    
+    /// Maximum coordinate value (INT64_MAX >> 2)
+    pub const MAX_COORD: i64 = i64::MAX >> 2;
+    /// Minimum coordinate value  
+    pub const MIN_COORD: i64 = -MAX_COORD;
+    /// Invalid coordinate sentinel
+    pub const INVALID: i64 = i64::MAX;
+    /// Maximum coordinate as double
+    pub const MAX_COORD_D: f64 = MAX_COORD as f64;
+    /// Minimum coordinate as double
+    pub const MIN_COORD_D: f64 = MIN_COORD as f64;
+    /// Maximum double value
+    pub const MAX_DBL: f64 = f64::MAX;
+}
+
 /// Error constants matching C++ implementation
 pub mod errors {
     /// Precision exceeds the permitted range
@@ -71,6 +109,12 @@ pub mod errors {
     pub const PRECISION_ERROR_I: i32 = 1;
     /// Error codes (2^n) - non-fatal  
     pub const SCALE_ERROR_I: i32 = 2;
+    /// Error codes (2^n) - non-fatal
+    pub const NON_PAIR_ERROR_I: i32 = 4;
+    /// Error codes (2^n) - fatal
+    pub const UNDEFINED_ERROR_I: i32 = 32;
+    /// Error codes (2^n)
+    pub const RANGE_ERROR_I: i32 = 64;
 }
 
 /// 2D point with generic numeric type
@@ -185,7 +229,7 @@ where
 
 /// Rectangle with generic numeric type
 /// Direct port from clipper.core.h line 295
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
 pub struct Rect<T> {
     pub left: T,
@@ -203,9 +247,94 @@ where
         Self { left, top, right, bottom }
     }
     
-    /// Check if rectangle is valid (left <= right, top <= bottom)
-    pub fn is_valid(&self) -> bool {
-        self.left <= self.right && self.top <= self.bottom
+    /// Create a rectangle, valid by default or invalid if specified
+    /// Direct port from clipper.core.h line 307
+    pub fn new_with_validity(is_valid: bool) -> Self
+    where
+        T: num_traits::Bounded,
+    {
+        if is_valid {
+            Self {
+                left: T::zero(),
+                top: T::zero(),
+                right: T::zero(),
+                bottom: T::zero(),
+            }
+        } else {
+            Self {
+                left: T::max_value(),
+                top: T::max_value(),
+                right: T::min_value(),
+                bottom: T::min_value(),
+            }
+        }
+    }
+    
+    /// Create an invalid rectangle
+    /// Direct port from clipper.core.h line 320
+    pub fn invalid() -> Self
+    where
+        T: num_traits::Bounded,
+    {
+        Self {
+            left: T::max_value(),
+            top: T::max_value(),
+            right: T::min_value(),
+            bottom: T::min_value(),
+        }
+    }
+    
+    /// Get midpoint of rectangle
+    /// Direct port from clipper.core.h line 336
+    pub fn mid_point(&self) -> Point<T> {
+        Point {
+            x: (self.left + self.right) / (T::one() + T::one()),
+            y: (self.top + self.bottom) / (T::one() + T::one()),
+        }
+    }
+    
+    /// Convert rectangle to path (clockwise from top-left)
+    /// Direct port from clipper.core.h line 341
+    pub fn as_path(&self) -> Path<T> {
+        vec![
+            Point::new(self.left, self.top),
+            Point::new(self.right, self.top),
+            Point::new(self.right, self.bottom),
+            Point::new(self.left, self.bottom),
+        ]
+    }
+    
+    /// Check if point is contained within rectangle (exclusive bounds)
+    /// Direct port from clipper.core.h line 352
+    pub fn contains_point(&self, pt: &Point<T>) -> bool {
+        pt.x > self.left && pt.x < self.right && pt.y > self.top && pt.y < self.bottom
+    }
+    
+    /// Check if another rectangle is fully contained within this rectangle
+    /// Direct port from clipper.core.h line 357
+    pub fn contains_rect(&self, rec: &Rect<T>) -> bool {
+        rec.left >= self.left && rec.right <= self.right &&
+        rec.top >= self.top && rec.bottom <= self.bottom
+    }
+    
+    /// Check if this rectangle intersects with another
+    /// Direct port from clipper.core.h line 372
+    pub fn intersects(&self, rec: &Rect<T>) -> bool {
+        let max_left = if self.left > rec.left { self.left } else { rec.left };
+        let min_right = if self.right < rec.right { self.right } else { rec.right };
+        let max_top = if self.top > rec.top { self.top } else { rec.top };
+        let min_bottom = if self.bottom < rec.bottom { self.bottom } else { rec.bottom };
+        
+        max_left <= min_right && max_top <= min_bottom
+    }
+    
+    /// Check if rectangle is valid (not using max sentinel values)
+    /// Direct port from clipper.core.h line 329
+    pub fn is_valid(&self) -> bool
+    where
+        T: num_traits::Bounded + PartialEq,
+    {
+        self.left != T::max_value()
     }
     
     /// Get width of rectangle
@@ -244,6 +373,32 @@ where
         self.top = self.top * scale;
         self.right = self.right * scale;
         self.bottom = self.bottom * scale;
+    }
+}
+
+// Implement PartialEq for Rect to match C++ operator==
+// Direct port from clipper.core.h line 378
+impl<T> PartialEq for Rect<T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.left == other.left && self.right == other.right &&
+        self.top == other.top && self.bottom == other.bottom
+    }
+}
+
+// Implement += operator for Rect (union operation)
+// Direct port from clipper.core.h line 383
+impl<T> std::ops::AddAssign for Rect<T>
+where
+    T: Num + Copy + PartialOrd,
+{
+    fn add_assign(&mut self, other: Self) {
+        self.left = if self.left < other.left { self.left } else { other.left };
+        self.top = if self.top < other.top { self.top } else { other.top };
+        self.right = if self.right > other.right { self.right } else { other.right };
+        self.bottom = if self.bottom > other.bottom { self.bottom } else { other.bottom };
     }
 }
 
@@ -465,7 +620,7 @@ mod tests {
         assert!(!rect.is_empty());
         
         let empty_rect = Rect::new(100i32, 200i32, 50i32, 150i32);
-        assert!(!empty_rect.is_valid());
+        assert!(empty_rect.is_valid()); // Geometrically invalid but not sentinel invalid
         assert!(empty_rect.is_empty());
     }
     
@@ -620,5 +775,144 @@ mod tests {
         let vec4 = Point64::new(0, 1);
         let dot2 = dot_product_two_vectors(vec3, vec4);
         assert_eq!(dot2, 0.0);
+    }
+    
+    #[test]
+    fn test_rect_validity() {
+        // Test valid rectangle creation
+        let valid_rect = Rect64::new_with_validity(true);
+        assert!(valid_rect.is_valid());
+        assert_eq!(valid_rect.left, 0);
+        assert_eq!(valid_rect.right, 0);
+        
+        // Test invalid rectangle creation
+        let invalid_rect = Rect64::new_with_validity(false);
+        assert!(!invalid_rect.is_valid());
+        
+        // Test invalid rectangle factory method
+        let invalid_rect2 = Rect64::invalid();
+        assert!(!invalid_rect2.is_valid());
+    }
+    
+    #[test]
+    fn test_rect_midpoint() {
+        let rect = Rect64::new(10, 20, 30, 40);
+        let mid = rect.mid_point();
+        assert_eq!(mid.x, 20); // (10 + 30) / 2
+        assert_eq!(mid.y, 30); // (20 + 40) / 2
+    }
+    
+    #[test]
+    fn test_rect_as_path() {
+        let rect = Rect64::new(0, 0, 100, 200);
+        let path = rect.as_path();
+        assert_eq!(path.len(), 4);
+        
+        // Clockwise from top-left
+        assert_eq!(path[0], Point64::new(0, 0));     // top-left
+        assert_eq!(path[1], Point64::new(100, 0));   // top-right  
+        assert_eq!(path[2], Point64::new(100, 200)); // bottom-right
+        assert_eq!(path[3], Point64::new(0, 200));   // bottom-left
+    }
+    
+    #[test]
+    fn test_rect_contains_point() {
+        let rect = Rect64::new(10, 10, 100, 100);
+        
+        // Point inside (exclusive bounds)
+        assert!(rect.contains_point(&Point64::new(50, 50)));
+        
+        // Points on edges should not be contained (exclusive)
+        assert!(!rect.contains_point(&Point64::new(10, 50))); // left edge
+        assert!(!rect.contains_point(&Point64::new(100, 50))); // right edge  
+        assert!(!rect.contains_point(&Point64::new(50, 10))); // top edge
+        assert!(!rect.contains_point(&Point64::new(50, 100))); // bottom edge
+        
+        // Points outside
+        assert!(!rect.contains_point(&Point64::new(5, 50)));
+        assert!(!rect.contains_point(&Point64::new(150, 50)));
+    }
+    
+    #[test]
+    fn test_rect_contains_rect() {
+        let outer = Rect64::new(0, 0, 100, 100);
+        let inner = Rect64::new(10, 10, 90, 90);
+        let overlapping = Rect64::new(50, 50, 150, 150);
+        let outside = Rect64::new(200, 200, 300, 300);
+        
+        assert!(outer.contains_rect(&inner));
+        assert!(!outer.contains_rect(&overlapping));
+        assert!(!outer.contains_rect(&outside));
+        
+        // Same rectangle should contain itself
+        assert!(outer.contains_rect(&outer));
+    }
+    
+    #[test] 
+    fn test_rect_intersects() {
+        let rect1 = Rect64::new(0, 0, 100, 100);
+        let rect2 = Rect64::new(50, 50, 150, 150); // overlapping
+        let rect3 = Rect64::new(200, 200, 300, 300); // separate
+        let rect4 = Rect64::new(100, 0, 200, 100); // touching edge
+        
+        assert!(rect1.intersects(&rect2));
+        assert!(!rect1.intersects(&rect3));
+        assert!(rect1.intersects(&rect4)); // touching edges do intersect
+        
+        // Rectangle intersects with itself
+        assert!(rect1.intersects(&rect1));
+    }
+    
+    #[test]
+    fn test_rect_equality() {
+        let rect1 = Rect64::new(10, 20, 30, 40);
+        let rect2 = Rect64::new(10, 20, 30, 40);
+        let rect3 = Rect64::new(10, 20, 30, 41);
+        
+        assert_eq!(rect1, rect2);
+        assert_ne!(rect1, rect3);
+    }
+    
+    #[test]
+    fn test_rect_union_operator() {
+        let mut rect1 = Rect64::new(0, 0, 50, 50);
+        let rect2 = Rect64::new(25, 25, 100, 100);
+        
+        rect1 += rect2;
+        
+        // Result should be bounding box of both rectangles
+        assert_eq!(rect1.left, 0);
+        assert_eq!(rect1.top, 0);
+        assert_eq!(rect1.right, 100);
+        assert_eq!(rect1.bottom, 100);
+    }
+    
+    #[test]
+    fn test_constants() {
+        use constants::*;
+        
+        assert!(PI > 3.14 && PI < 3.15);
+        assert_eq!(CLIPPER2_MAX_DEC_PRECISION, 8);
+        assert_eq!(MIN_COORD, -MAX_COORD);
+        assert_eq!(INVALID, i64::MAX);
+        assert!(MAX_COORD_D > 0.0);
+        assert!(MIN_COORD_D < 0.0);
+    }
+    
+    #[test]
+    fn test_do_error() {
+        use errors::*;
+        
+        let result = do_error(PRECISION_ERROR_I);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().description(), PRECISION_ERROR);
+        
+        let result2 = do_error(SCALE_ERROR_I);
+        assert!(result2.is_err());
+        assert_eq!(result2.unwrap_err().description(), SCALE_ERROR);
+        
+        let result3 = do_error(999); // unknown error
+        assert!(result3.is_err());
+        assert_eq!(result3.unwrap_err().description(), "Unknown error");
     }
 }

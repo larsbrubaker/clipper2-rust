@@ -7,7 +7,9 @@
       "Bash(cargo init:*)",
       "Bash(mkdir:*)",
       "Bash(cargo test:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(sqlite3:*)",
+      "Bash(cargo check:*)"
     ],
     "deny": []
   }
