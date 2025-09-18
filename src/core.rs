@@ -535,6 +535,131 @@ where
     vec1_x * vec2_x + vec1_y * vec2_y
 }
 
+/// Helper for returning -1, 0, or 1 based on sign
+/// Direct port from clipper.core.h line 697  
+#[inline]
+pub fn tri_sign(x: i64) -> i32 {
+    if x > 0 { 1 } else if x < 0 { -1 } else { 0 }
+}
+
+/// 128-bit unsigned integer struct for high-precision multiplication
+/// Direct port from clipper.core.h line 685
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct UInt128Struct {
+    pub lo: u64,
+    pub hi: u64,
+}
+
+/// Multiply two 64-bit unsigned integers to get 128-bit result
+/// Direct port from clipper.core.h line 690
+#[inline]
+pub fn multiply_u64(a: u64, b: u64) -> UInt128Struct {
+    // Lambdas from C++: lo = x & 0xFFFFFFFF, hi = x >> 32
+    let lo = |x: u64| -> u64 { x & 0xFFFFFFFF };
+    let hi = |x: u64| -> u64 { x >> 32 };
+    
+    let x1 = lo(a) * lo(b);
+    let x2 = hi(a) * lo(b) + hi(x1);
+    let x3 = lo(a) * hi(b) + lo(x2);
+    let lobits = lo(x3) << 32 | lo(x1);
+    let hibits = hi(a) * hi(b) + hi(x2) + hi(x3);
+    
+    UInt128Struct { lo: lobits, hi: hibits }
+}
+
+/// Check if products a*b and c*d are equal using exact 128-bit arithmetic
+/// Direct port from clipper.core.h line 703
+#[inline]
+pub fn products_are_equal(a: i64, b: i64, c: i64, d: i64) -> bool {
+    // For 128-bit capable systems, use i128 for simplicity
+    #[cfg(target_pointer_width = "64")]
+    {
+        let ab = a as i128 * b as i128;
+        let cd = c as i128 * d as i128;
+        ab == cd
+    }
+    
+    // For other systems or if we want exact C++ behavior, use the manual implementation
+    #[cfg(not(target_pointer_width = "64"))]
+    {
+        // Convert to unsigned for overflow calculations
+        let abs_a = a.unsigned_abs();
+        let abs_b = b.unsigned_abs();
+        let abs_c = c.unsigned_abs();
+        let abs_d = d.unsigned_abs();
+        
+        let ab = multiply_u64(abs_a, abs_b);
+        let cd = multiply_u64(abs_c, abs_d);
+        
+        // Calculate signs - important to differentiate 0 values
+        let sign_ab = tri_sign(a) * tri_sign(b);
+        let sign_cd = tri_sign(c) * tri_sign(d);
+        
+        ab == cd && sign_ab == sign_cd
+    }
+}
+
+/// Strip duplicate consecutive points from a path
+/// Direct port from clipper.core.h line 658
+#[inline]
+pub fn strip_duplicates_path<T>(path: &mut Path<T>, is_closed_path: bool)
+where
+    T: PartialEq + Clone,
+{
+    // Use stable dedup to remove consecutive duplicates
+    path.dedup();
+    
+    // For closed paths, also remove duplicates between last and first points
+    if is_closed_path {
+        while path.len() > 1 && path.last() == path.first() {
+            path.pop();
+        }
+    }
+}
+
+/// Strip duplicate consecutive points from multiple paths
+/// Direct port from clipper.core.h line 670
+#[inline]
+pub fn strip_duplicates_paths<T>(paths: &mut Paths<T>, is_closed_path: bool)
+where
+    T: PartialEq + Clone,
+{
+    for path in paths.iter_mut() {
+        strip_duplicates_path(path, is_closed_path);
+    }
+}
+
+/// Check if precision is within acceptable range and adjust if needed
+/// Direct port from clipper.core.h line 682
+#[inline]
+pub fn check_precision_range(precision: &mut i32, error_code: &mut i32) {
+    use constants::CLIPPER2_MAX_DEC_PRECISION;
+    use errors::PRECISION_ERROR_I;
+    
+    if *precision >= -CLIPPER2_MAX_DEC_PRECISION && *precision <= CLIPPER2_MAX_DEC_PRECISION {
+        return;
+    }
+    
+    *error_code |= PRECISION_ERROR_I; // non-fatal error
+    
+    // In Rust, we return the error instead of calling DoError with exceptions
+    // This matches the C++ behavior when exceptions are disabled
+    
+    *precision = if *precision > 0 {
+        CLIPPER2_MAX_DEC_PRECISION
+    } else {
+        -CLIPPER2_MAX_DEC_PRECISION
+    };
+}
+
+/// Check precision range without error code (convenience function)
+/// Direct port from clipper.core.h line 691
+#[inline]
+pub fn check_precision_range_simple(precision: &mut i32) {
+    let mut error_code = 0;
+    check_precision_range(precision, &mut error_code);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -914,5 +1039,230 @@ mod tests {
         let result3 = do_error(999); // unknown error
         assert!(result3.is_err());
         assert_eq!(result3.unwrap_err().description(), "Unknown error");
+    }
+
+    #[test]
+    fn test_tri_sign() {
+        assert_eq!(tri_sign(10), 1);
+        assert_eq!(tri_sign(-10), -1);
+        assert_eq!(tri_sign(0), 0);
+        assert_eq!(tri_sign(i64::MAX), 1);
+        assert_eq!(tri_sign(i64::MIN), -1);
+        assert_eq!(tri_sign(1), 1);
+        assert_eq!(tri_sign(-1), -1);
+    }
+
+    #[test]
+    fn test_multiply_u64() {
+        // Test simple cases
+        let result = multiply_u64(0, 0);
+        assert_eq!(result.hi, 0);
+        assert_eq!(result.lo, 0);
+        
+        let result = multiply_u64(1, 1);
+        assert_eq!(result.hi, 0);
+        assert_eq!(result.lo, 1);
+        
+        let result = multiply_u64(10, 20);
+        assert_eq!(result.hi, 0);
+        assert_eq!(result.lo, 200);
+        
+        // Test case that would overflow 64-bit
+        let result = multiply_u64(u64::MAX, 2);
+        assert_eq!(result.hi, 1);
+        assert_eq!(result.lo, u64::MAX - 1);
+        
+        // Test maximum values
+        let result = multiply_u64(u64::MAX, u64::MAX);
+        assert_eq!(result.hi, u64::MAX - 1);
+        assert_eq!(result.lo, 1);
+    }
+
+    #[test]
+    fn test_products_are_equal() {
+        // Test basic equality
+        assert!(products_are_equal(2, 3, 6, 1));
+        assert!(products_are_equal(2, 3, 1, 6));
+        assert!(products_are_equal(4, 5, 10, 2));
+        
+        // Test basic inequality
+        assert!(!products_are_equal(2, 3, 7, 1));
+        assert!(!products_are_equal(4, 5, 10, 3));
+        
+        // Test with zero values
+        assert!(products_are_equal(0, 5, 0, 10));
+        assert!(products_are_equal(5, 0, 10, 0));
+        assert!(products_are_equal(0, 5, 1, 0)); // Both products are 0
+        assert!(!products_are_equal(0, 5, 1, 1)); // 0 != 1
+        
+        // Test with negative values
+        assert!(products_are_equal(-2, 3, 2, -3));
+        assert!(products_are_equal(-2, -3, 2, 3));
+        assert!(!products_are_equal(-2, 3, 2, 3));
+        
+        // Test large values that might cause overflow
+        let large = 1000000000i64;
+        assert!(products_are_equal(large, 2, 2 * large, 1));
+        assert!(products_are_equal(large, large, large * large, 1));
+        
+        // Test edge cases with max values 
+        assert!(products_are_equal(i64::MAX, 0, 0, i64::MAX));
+        assert!(products_are_equal(i64::MIN, 0, 0, i64::MIN));
+        
+        // Test sign differentiation - this is important for the algorithm
+        assert!(products_are_equal(1, -1, -1, 1)); // Both products are -1
+        assert!(products_are_equal(-1, -1, 1, 1)); // Both positive results
+        assert!(!products_are_equal(1, -1, 1, 1)); // -1 != 1
+    }
+
+    #[test]
+    fn test_strip_duplicates_path() {
+        // Test open path with duplicates
+        let mut open_path = vec![
+            Point64::new(0, 0),
+            Point64::new(0, 0), // duplicate
+            Point64::new(10, 10),
+            Point64::new(10, 10), // duplicate
+            Point64::new(20, 20),
+        ];
+        strip_duplicates_path(&mut open_path, false);
+        assert_eq!(open_path.len(), 3);
+        assert_eq!(open_path[0], Point64::new(0, 0));
+        assert_eq!(open_path[1], Point64::new(10, 10));
+        assert_eq!(open_path[2], Point64::new(20, 20));
+        
+        // Test closed path with duplicates including wrap-around
+        let mut closed_path = vec![
+            Point64::new(0, 0),
+            Point64::new(10, 0),
+            Point64::new(10, 10),
+            Point64::new(0, 10),
+            Point64::new(0, 0), // should be removed for closed path
+        ];
+        strip_duplicates_path(&mut closed_path, true);
+        assert_eq!(closed_path.len(), 4);
+        assert_eq!(closed_path[0], Point64::new(0, 0));
+        assert_eq!(closed_path[3], Point64::new(0, 10));
+        
+        // Test path with no duplicates
+        let mut no_dups = vec![
+            Point64::new(0, 0),
+            Point64::new(10, 10),
+            Point64::new(20, 20),
+        ];
+        let original = no_dups.clone();
+        strip_duplicates_path(&mut no_dups, false);
+        assert_eq!(no_dups, original);
+        
+        // Test empty path
+        let mut empty: Path64 = vec![];
+        strip_duplicates_path(&mut empty, true);
+        assert!(empty.is_empty());
+        
+        // Test single point path
+        let mut single = vec![Point64::new(0, 0)];
+        strip_duplicates_path(&mut single, true);
+        assert_eq!(single.len(), 1);
+    }
+
+    #[test]
+    fn test_strip_duplicates_paths() {
+        let mut paths = vec![
+            vec![
+                Point64::new(0, 0),
+                Point64::new(0, 0), // duplicate
+                Point64::new(10, 10),
+            ],
+            vec![
+                Point64::new(20, 20),
+                Point64::new(30, 30),
+                Point64::new(20, 20), // wrap-around duplicate
+            ],
+        ];
+        
+        strip_duplicates_paths(&mut paths, true);
+        
+        // First path should have duplicate removed
+        assert_eq!(paths[0].len(), 2);
+        assert_eq!(paths[0][0], Point64::new(0, 0));
+        assert_eq!(paths[0][1], Point64::new(10, 10));
+        
+        // Second path should have wrap-around duplicate removed
+        assert_eq!(paths[1].len(), 2);
+        assert_eq!(paths[1][0], Point64::new(20, 20));
+        assert_eq!(paths[1][1], Point64::new(30, 30));
+    }
+
+    #[test]
+    fn test_check_precision_range() {
+        use constants::CLIPPER2_MAX_DEC_PRECISION;
+        use errors::PRECISION_ERROR_I;
+        
+        // Test valid precision - should not change
+        let mut precision = 5;
+        let mut error_code = 0;
+        check_precision_range(&mut precision, &mut error_code);
+        assert_eq!(precision, 5);
+        assert_eq!(error_code, 0);
+        
+        // Test maximum valid precision
+        let mut precision = CLIPPER2_MAX_DEC_PRECISION;
+        let mut error_code = 0;
+        check_precision_range(&mut precision, &mut error_code);
+        assert_eq!(precision, CLIPPER2_MAX_DEC_PRECISION);
+        assert_eq!(error_code, 0);
+        
+        // Test minimum valid precision
+        let mut precision = -CLIPPER2_MAX_DEC_PRECISION;
+        let mut error_code = 0;
+        check_precision_range(&mut precision, &mut error_code);
+        assert_eq!(precision, -CLIPPER2_MAX_DEC_PRECISION);
+        assert_eq!(error_code, 0);
+        
+        // Test positive overflow - should clamp and set error
+        let mut precision = CLIPPER2_MAX_DEC_PRECISION + 1;
+        let mut error_code = 0;
+        check_precision_range(&mut precision, &mut error_code);
+        assert_eq!(precision, CLIPPER2_MAX_DEC_PRECISION);
+        assert_eq!(error_code, PRECISION_ERROR_I);
+        
+        // Test negative overflow - should clamp and set error
+        let mut precision = -CLIPPER2_MAX_DEC_PRECISION - 1;
+        let mut error_code = 0;
+        check_precision_range(&mut precision, &mut error_code);
+        assert_eq!(precision, -CLIPPER2_MAX_DEC_PRECISION);
+        assert_eq!(error_code, PRECISION_ERROR_I);
+        
+        // Test extreme positive value
+        let mut precision = i32::MAX;
+        let mut error_code = 0;
+        check_precision_range(&mut precision, &mut error_code);
+        assert_eq!(precision, CLIPPER2_MAX_DEC_PRECISION);
+        assert_eq!(error_code, PRECISION_ERROR_I);
+        
+        // Test extreme negative value
+        let mut precision = i32::MIN;
+        let mut error_code = 0;
+        check_precision_range(&mut precision, &mut error_code);
+        assert_eq!(precision, -CLIPPER2_MAX_DEC_PRECISION);
+        assert_eq!(error_code, PRECISION_ERROR_I);
+    }
+
+    #[test]
+    fn test_check_precision_range_simple() {
+        use constants::CLIPPER2_MAX_DEC_PRECISION;
+        
+        // Test convenience function
+        let mut precision = CLIPPER2_MAX_DEC_PRECISION + 5;
+        check_precision_range_simple(&mut precision);
+        assert_eq!(precision, CLIPPER2_MAX_DEC_PRECISION);
+        
+        let mut precision = -CLIPPER2_MAX_DEC_PRECISION - 3;
+        check_precision_range_simple(&mut precision);
+        assert_eq!(precision, -CLIPPER2_MAX_DEC_PRECISION);
+        
+        let mut precision = 3;
+        check_precision_range_simple(&mut precision);
+        assert_eq!(precision, 3); // Should remain unchanged
     }
 }

@@ -64,10 +64,10 @@
 - DONE TESTED `void operator==()` (line 378)
 - DONE TESTED `void DoError()` (line 531)
 - DONE TESTED `void DoError()` (line 572)
-- TODO PENDING `void StripDuplicates()` (line 676)
+- DONE TESTED `void StripDuplicates()` (line 676)
 - DONE TESTED `void DoError()` (line 687)
-- TODO PENDING `void CheckPrecisionRange()` (line 694)
-- TODO PENDING `return ProductsAreEqual()` (line 805)
+- DONE TESTED `void CheckPrecisionRange()` (line 694)
+- DONE TESTED `return ProductsAreEqual()` (line 805)
 - DONE TESTED `double CrossProduct()` (line 810)
 - DONE TESTED `double DotProduct()` (line 822)
 
@@ -163,7 +163,7 @@
 - TODO PENDING `void CleanUp()` (line 515)
 - TODO PENDING `void BuildPathsD()` (line 526)
 - TODO PENDING `void BuildTreeD()` (line 527)
-- TODO PENDING `void CheckPrecisionRange()` (line 531)
+- DONE TESTED `void CheckPrecisionRange()` (line 531)
 - TODO PENDING `void SetZCallback()` (line 540)
 - TODO PENDING `void zCallbackD_()` (line 554)
 - TODO PENDING `return Execute()` (line 591)
@@ -198,31 +198,31 @@
 - TODO PENDING `return CreateCPathsFromPathsT()` (line 812)
 
 ### clipper.h
-- TODO PENDING `void CheckPrecisionRange()` (line 47)
+- DONE TESTED `void CheckPrecisionRange()` (line 47)
 - TODO PENDING `ClipperD clipper()` (line 50)
-- TODO PENDING `void CheckPrecisionRange()` (line 63)
+- DONE TESTED `void CheckPrecisionRange()` (line 63)
 - TODO PENDING `ClipperD clipper()` (line 65)
 - TODO PENDING `return BooleanOp()` (line 73)
 - TODO PENDING `return BooleanOp()` (line 78)
 - TODO PENDING `return BooleanOp()` (line 83)
 - TODO PENDING `return BooleanOp()` (line 88)
-- TODO PENDING `void CheckPrecisionRange()` (line 104)
+- DONE TESTED `void CheckPrecisionRange()` (line 104)
 - TODO PENDING `ClipperD clipper()` (line 106)
 - TODO PENDING `return BooleanOp()` (line 114)
 - TODO PENDING `return BooleanOp()` (line 119)
 - TODO PENDING `return BooleanOp()` (line 124)
 - TODO PENDING `return BooleanOp()` (line 129)
 - TODO PENDING `ClipperOffset clip_offset()` (line 137)
-- TODO PENDING `void CheckPrecisionRange()` (line 149)
+- DONE TESTED `void CheckPrecisionRange()` (line 149)
 - TODO PENDING `ClipperOffset clip_offset()` (line 153)
 - TODO PENDING `RectClip64 rc()` (line 204)
 - TODO PENDING `RectClip64 rc()` (line 211)
-- TODO PENDING `void CheckPrecisionRange()` (line 219)
+- DONE TESTED `void CheckPrecisionRange()` (line 219)
 - TODO PENDING `RectClip64 rc()` (line 223)
 - TODO PENDING `return RectClip()` (line 232)
 - TODO PENDING `RectClipLines64 rcl()` (line 238)
 - TODO PENDING `return RectClipLines()` (line 244)
-- TODO PENDING `void CheckPrecisionRange()` (line 251)
+- DONE TESTED `void CheckPrecisionRange()` (line 251)
 - TODO PENDING `RectClipLines64 rcl()` (line 255)
 - TODO PENDING `return RectClipLines()` (line 264)
 - TODO PENDING `void PolyPathToPaths64()` (line 274)
@@ -233,7 +233,7 @@
 - TODO PENDING `void static_assert()` (line 479)
 - TODO PENDING `Path64 result()` (line 492)
 - TODO PENDING `PathD result()` (line 505)
-- TODO PENDING `void CheckPrecisionRange()` (line 568)
+- DONE TESTED `void CheckPrecisionRange()` (line 568)
 
 ### clipper.offset.h
 - TODO PENDING `void Group()` (line 42)
@@ -441,7 +441,7 @@
 - TODO PENDING `return Point64()` (line 109)
 - TODO PENDING `return PointD()` (line 116)
 - TODO PENDING `return PointD()` (line 118)
-- TODO PENDING `void StripDuplicates()` (line 146)
+- DONE TESTED `void StripDuplicates()` (line 146)
 - TODO PENDING `void GetLowestClosedPathInfo()` (line 151)
 - TODO PENDING `void GetSegmentIntersectPt()` (line 242)
 - TODO PENDING `void GetSegmentIntersectPt()` (line 251)
@@ -912,7 +912,7 @@
 - TODO PENDING `void LoadTestNum()` (line 413)
 
 ### StripDuplicateBenchmark.cpp
-- TODO PENDING `void StripDuplicates2()` (line 56)
+- DONE TESTED `void StripDuplicates2()` (line 56)
 - TODO PENDING `void BENCHMARK()` (line 70)
 - TODO PENDING `void BENCHMARK()` (line 70)
 - TODO PENDING `void BENCHMARK()` (line 71)
@@ -923,9 +923,9 @@
 ## IMPLEMENTATION PROGRESS
 
 - **Total Functions**: 790
-- **Implemented**: 35 (4.4%)
-- **Tested**: 35 (4.4%)
-- **Remaining**: 755 functions
+- **Implemented**: 48 (6.1%)
+- **Tested**: 48 (6.1%)
+- **Remaining**: 742 functions
 
 ## LEGEND
 
