@@ -63,10 +63,6 @@
 - DONE TESTED `void Scale()` (line 363)
 - DONE TESTED `bool IsEmpty()` (line 370)
 - DONE TESTED `void operator==()` (line 378)
-- DONE TESTED `Rect<T> GetBounds()` (line 432)
-- DONE TESTED `Rect<T> GetBounds()` (line 449)
-- DONE TESTED `Rect<T> GetBounds()` (line 467)
-- DONE TESTED `Rect<T> GetBounds()` (line 484)
 - DONE TESTED `void DoError()` (line 531)
 - DONE TESTED `void DoError()` (line 572)
 - DONE TESTED `void StripDuplicates()` (line 676)
@@ -78,7 +74,6 @@
 
 ### clipper.engine.h
 - TODO PENDING `void OutPt()` (line 62)
-- TODO PENDING `void ~OutRec()` (line 92)
 - TODO PENDING `void OutRec()` (line 92)
 - TODO PENDING `void LocalMinima()` (line 135)
 - TODO PENDING `void IntersectNode()` (line 143)
@@ -144,16 +139,13 @@
 - TODO PENDING `void Clear()` (line 284)
 - TODO PENDING `void AddReuseableData()` (line 285)
 - TODO PENDING `void PolyPath()` (line 302)
-- TODO PENDING `PolyPath* AddChild()` (line 316)
 - TODO PENDING `void Clear()` (line 318)
 - TODO PENDING `size_t Count()` (line 319)
 - TODO PENDING `PolyPath* Parent()` (line 321)
 - TODO PENDING `void PolyPath64()` (line 339)
 - TODO PENDING `void PolyPath64()` (line 340)
-- TODO PENDING `void ~PolyPath64()` (line 342)
 - TODO PENDING `Path64& Polygon()` (line 374)
 - TODO PENDING `void PolyPathD()` (line 391)
-- TODO PENDING `void ~PolyPathD()` (line 409)
 - TODO PENDING `void SetScale()` (line 426)
 - TODO PENDING `double Scale()` (line 427)
 - TODO PENDING `PathD& Polygon()` (line 449)
@@ -261,7 +253,6 @@
 - TODO PENDING `void ExecuteInternal()` (line 83)
 - TODO PENDING `void ClipperOffset()` (line 85)
 - TODO PENDING `void reverse_solution_()` (line 91)
-- TODO PENDING `void ~ClipperOffset()` (line 93)
 - TODO PENDING `int ErrorCode()` (line 95)
 - TODO PENDING `void AddPath()` (line 96)
 - TODO PENDING `void AddPaths()` (line 97)
@@ -569,7 +560,6 @@
 ### clipper.svg.h
 - TODO PENDING `void DrawCircle()` (line 77)
 - TODO PENDING `void SvgWriter()` (line 79)
-- TODO PENDING `void ~SvgWriter()` (line 88)
 - TODO PENDING `void Clear()` (line 90)
 - TODO PENDING `FillRule Fill_Rule()` (line 91)
 - TODO PENDING `void SetCoordsStyle()` (line 92)
@@ -716,7 +706,6 @@
 - TODO PENDING `void EXPECT_EQ()` (line 59)
 
 ### TestRectClip.cpp
-- TODO PENDING `Rect64 r()` (line 58)
 - TODO PENDING `Rect64 rect()` (line 70)
 - TODO PENDING `RectClip64 clip()` (line 72)
 
@@ -821,8 +810,6 @@
 - TODO PENDING `void System()` (line 69)
 - TODO PENDING `void System()` (line 104)
 - TODO PENDING `void System()` (line 153)
-- TODO PENDING `Timer t()` (line 170)
-- TODO PENDING `Timer t()` (line 175)
 - TODO PENDING `void System()` (line 195)
 
 ### SimpleClipping.cpp
@@ -939,10 +926,10 @@
 
 ## IMPLEMENTATION PROGRESS
 
-- **Total Functions**: 805
-- **Implemented**: 53 (6.6%)
-- **Tested**: 53 (6.6%)
-- **Remaining**: 752 functions
+- **Total Functions**: 792
+- **Implemented**: 49 (6.2%)
+- **Tested**: 49 (6.2%)
+- **Remaining**: 743 functions
 
 ## LEGEND
 
