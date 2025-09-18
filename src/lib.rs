@@ -15,9 +15,9 @@
 // Module structure mirrors C++ header organization
 // Following STRICT RULES - only include implemented modules
 pub mod version;  // clipper.version.h - Version constants (IMPLEMENTED)
+pub mod core;     // clipper.core.h - Core types and basic functions (IMPLEMENTED)
 
-// TODO - Implement these modules in dependency order (NO STUBS ALLOWED):
-// pub mod core;     // clipper.core.h - Core types and basic functions  
+// TODO - Implement these modules in dependency order (NO STUBS ALLOWED):  
 // pub mod engine;   // clipper.engine.h - Main clipping engine
 // pub mod offset;   // clipper.offset.h - Path offsetting
 // pub mod rectclip; // clipper.rectclip.h - Rectangle clipping
@@ -26,3 +26,4 @@ pub mod version;  // clipper.version.h - Version constants (IMPLEMENTED)
 
 // Re-export implemented types and functions only
 pub use version::*;
+pub use core::*;
