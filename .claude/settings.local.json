@@ -3,7 +3,11 @@
     "allow": [
       "Bash(python:*)",
       "Bash(del clipper2_analysis.db)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(cargo init:*)",
+      "Bash(mkdir:*)",
+      "Bash(cargo test:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

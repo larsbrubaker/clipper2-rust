@@ -1,0 +1,25 @@
+[package]
+name = "clipper2"
+version = "0.1.0"
+edition = "2021"
+description = "High-performance 2D polygon clipping library - Rust port of Clipper2"
+license = "BSL-1.0"
+repository = "https://github.com/AngusJohnson/Clipper2"
+keywords = ["polygon", "clipping", "geometry", "computational-geometry", "2d"]
+categories = ["algorithms", "graphics", "mathematics"]
+
+[lib]
+name = "clipper2"
+path = "src/lib.rs"
+
+[dependencies]
+# Core dependencies for mathematical operations
+num-traits = "0.2"
+
+[dev-dependencies]
+# Testing framework
+criterion = "0.5"
+
+[[bench]]
+name = "clipper_bench"
+harness = false
