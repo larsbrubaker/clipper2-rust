@@ -24,9 +24,9 @@ Write-Host "`n📏 Running file length validation..." -ForegroundColor Yellow
 try {
     cargo test --test file_length_validation --quiet
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ All files are within the 1800-line limit" -ForegroundColor Green
+        Write-Host "✅ All files are within the 1000-line limit" -ForegroundColor Green
     } else {
-        Write-Host "❌ Some files exceed the 1800-line limit" -ForegroundColor Red
+        Write-Host "❌ Some files exceed the 1000-line limit" -ForegroundColor Red
         Write-Host "   Run 'cargo test --test file_length_validation file_metrics::generate_refactoring_report' for refactoring suggestions" -ForegroundColor Yellow
         $exitCode = 1
     }

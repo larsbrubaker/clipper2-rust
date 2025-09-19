@@ -929,3 +929,8 @@ where
 {
     area(poly) >= 0.0
 }
+
+// Include tests from separate file
+#[cfg(test)]
+#[path = "core_tests.rs"]
+mod tests;
