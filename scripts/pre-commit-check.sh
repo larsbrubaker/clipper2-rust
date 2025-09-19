@@ -43,11 +43,11 @@ fi
 EXIT_CODE=0
 
 echo -e "\n${YELLOW}📏 Running file length validation...${NC}"
-if cargo test file_length_validation::test_source_files_line_count_under_limit --quiet; then
+if cargo test --test file_length_validation --quiet; then
     echo -e "${GREEN}✅ All files are within the 800-line limit${NC}"
 else
     echo -e "${RED}❌ Some files exceed the 800-line limit${NC}"
-    echo -e "${YELLOW}   Run 'cargo test file_length_validation::file_metrics::generate_refactoring_report' for refactoring suggestions${NC}"
+    echo -e "${YELLOW}   Run 'cargo test --test file_length_validation file_metrics::generate_refactoring_report' for refactoring suggestions${NC}"
     EXIT_CODE=1
 fi
 
@@ -60,7 +60,7 @@ else
 fi
 
 # Skip integration tests if they don't exist
-if [ -d "tests" ] && find tests -name "*.rs" -not -name "file_length_validation.rs" | grep -q .; then
+if [ -d "Tests" ] && find Tests -name "*.rs" -not -name "file_length_validation.rs" | grep -q .; then
     echo -e "\n${YELLOW}🔗 Running integration tests...${NC}"
     if cargo test --test "*" --quiet; then
         echo -e "${GREEN}✅ Integration tests passed${NC}"

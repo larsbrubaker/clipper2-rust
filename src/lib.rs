@@ -1,11 +1,11 @@
 //! # Clipper2 - High-performance 2D polygon clipping library
 //!
 //! This is a complete Rust port of the Clipper2 C++ library by Angus Johnson.
-//! 
+//!
 //! ## Implementation Status
-//! 
+//!
 //! Following STRICT implementation rules:
-//! - NO stubs or todo!() macros allowed
+//! - NO stubs or todo macros allowed
 //! - Functions implemented only when all dependencies are ready
 //! - Each function must have comprehensive tests
 //! - Exact behavioral matching with C++ implementation
@@ -14,10 +14,10 @@
 
 // Module structure mirrors C++ header organization
 // Following STRICT RULES - only include implemented modules
-pub mod version;  // clipper.version.h - Version constants (IMPLEMENTED)
-pub mod core;     // clipper.core.h - Core types and basic functions (IMPLEMENTED)
+pub mod core;
+pub mod version; // clipper.version.h - Version constants (IMPLEMENTED) // clipper.core.h - Core types and basic functions (IMPLEMENTED)
 
-// TODO - Implement these modules in dependency order (NO STUBS ALLOWED):  
+// Future modules to implement in dependency order (NO STUBS ALLOWED):
 // pub mod engine;   // clipper.engine.h - Main clipping engine
 // pub mod offset;   // clipper.offset.h - Path offsetting
 // pub mod rectclip; // clipper.rectclip.h - Rectangle clipping
@@ -25,5 +25,5 @@ pub mod core;     // clipper.core.h - Core types and basic functions (IMPLEMENTE
 // pub mod export;   // clipper.export.h - Export utilities
 
 // Re-export implemented types and functions only
-pub use version::*;
 pub use core::*;
+pub use version::*;

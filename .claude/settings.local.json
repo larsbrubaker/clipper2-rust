@@ -10,7 +10,13 @@
       "Bash(grep:*)",
       "Bash(sqlite3:*)",
       "Bash(cargo check:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(powershell:*)",
+      "Bash(bash:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo build:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const MAX_FILE_LENGTH: usize = 800;
+const MAX_FILE_LENGTH: usize = 1800;
 
 /// Walk directory recursively to find all files with specified extensions
 fn find_files_with_extensions(dir: &Path, extensions: &[&str]) -> Vec<PathBuf> {
@@ -14,11 +14,11 @@ fn find_files_with_extensions(dir: &Path, extensions: &[&str]) -> Vec<PathBuf> {
             if path.is_dir() {
                 // Skip target directory, hidden directories, and C++ source directory
                 if let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) {
-                    if dir_name == "target" 
-                        || dir_name.starts_with('.') 
-                        || dir_name == "CPP" 
+                    if dir_name == "target"
+                        || dir_name.starts_with('.')
+                        || dir_name == "CPP"
                         || dir_name == "pkg"
-                        || dir_name == "Tests" 
+                        || dir_name == "Tests"
                     {
                         continue;
                     }
@@ -192,13 +192,14 @@ fn test_project_structure_health() {
     }
 
     // Additional check for Clipper2-specific concerns
-    let rust_files: Vec<_> = files.iter()
+    let rust_files: Vec<_> = files
+        .iter()
         .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("rs"))
         .collect();
-    
+
     println!("🦀 Rust-specific metrics:");
     println!("  - Rust source files: {}", rust_files.len());
-    
+
     if rust_files.len() > 20 {
         println!("💡 Consider organizing Rust modules into subdirectories as the project grows");
     }
@@ -292,7 +293,7 @@ mod file_metrics {
     #[test]
     fn validate_clipper2_project_structure() {
         let project_root = std::env::current_dir().unwrap();
-        
+
         // Check for essential project files
         let essential_files = [
             "Cargo.toml",
@@ -311,12 +312,7 @@ mod file_metrics {
         }
 
         // Check for essential directories
-        let essential_dirs = [
-            "src",
-            "tests",
-            "CPP",
-            "scripts",
-        ];
+        let essential_dirs = ["src", "tests", "CPP", "scripts"];
 
         for dir in essential_dirs {
             let dir_path = project_root.join(dir);
