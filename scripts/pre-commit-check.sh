@@ -44,9 +44,9 @@ EXIT_CODE=0
 
 echo -e "\n${YELLOW}📏 Running file length validation...${NC}"
 if cargo test --test file_length_validation --quiet; then
-    echo -e "${GREEN}✅ All files are within the 800-line limit${NC}"
+    echo -e "${GREEN}✅ All files are within the 1800-line limit${NC}"
 else
-    echo -e "${RED}❌ Some files exceed the 800-line limit${NC}"
+    echo -e "${RED}❌ Some files exceed the 1800-line limit${NC}"
     echo -e "${YELLOW}   Run 'cargo test --test file_length_validation file_metrics::generate_refactoring_report' for refactoring suggestions${NC}"
     EXIT_CODE=1
 fi
