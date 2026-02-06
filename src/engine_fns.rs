@@ -502,10 +502,12 @@ pub fn is_joined(e: &Active) -> bool {
 /// Direct port from clipper.engine.cpp SetOwner (line 478)
 pub fn set_owner(outrec_list: &mut [OutRec], outrec_idx: usize, new_owner_idx: usize) {
     // precondition: new_owner_idx is valid
-    outrec_list[new_owner_idx].owner = get_real_outrec(
-        outrec_list,
-        outrec_list[new_owner_idx].owner.unwrap_or(new_owner_idx),
-    );
+    // Direct port from C++: new_owner->owner = GetRealOutRec(new_owner->owner);
+    // When owner is None, GetRealOutRec returns None (C++ handles nullptr correctly)
+    outrec_list[new_owner_idx].owner = match outrec_list[new_owner_idx].owner {
+        Some(owner_idx) => get_real_outrec(outrec_list, owner_idx),
+        None => None,
+    };
     let mut tmp = Some(new_owner_idx);
     while let Some(t) = tmp {
         if t == outrec_idx {
