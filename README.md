@@ -1,41 +1,54 @@
-# Clipper2 Rust Port
+# Clipper2 Rust
 
-A high-performance 2D polygon clipping library - Rust port of the [Clipper2 C++ library](https://github.com/AngusJohnson/Clipper2) by Angus Johnson.
+A Polygon <a href="https://en.wikipedia.org/wiki/Clipping_(computer_graphics)">Clipping</a>, <a href="https://en.wikipedia.org/wiki/Parallel_curve">Offsetting</a> and <a href="https://en.wikipedia.org/wiki/Constrained_Delaunay_triangulation">Triangulation</a> library — a pure Rust port of the [Clipper2 C++ library](https://github.com/AngusJohnson/Clipper2) by [Angus Johnson](https://www.angusj.com).
 
-[![Crates.io](https://img.shields.io/crates/v/clipper2.svg)](https://crates.io/crates/clipper2)
-[![Documentation](https://docs.rs/clipper2/badge.svg)](https://docs.rs/clipper2)
-[![License: BSL-1.0](https://img.shields.io/badge/License-BSL--1.0-blue.svg)](https://opensource.org/licenses/BSL-1.0)
+[![License](https://img.shields.io/badge/License-Boost_1.0-lightblue.svg)](https://www.boost.org/LICENSE_1_0.txt)
+[![documentation](https://user-images.githubusercontent.com/5280692/187832279-b2a43890-da80-4888-95fe-793f092be372.svg)](https://www.angusj.com/clipper2/Docs/Overview.htm)
 
 ## Overview
 
-Clipper2 is a comprehensive 2D polygon clipping library that performs **intersection**, **union**, **difference** and **XOR** boolean operations on polygons. It also performs polygon **offsetting/inflating** and **path simplification**.
+The **Clipper2** library performs **intersection**, **union**, **difference** and **XOR** boolean operations on both simple and complex polygons. It also performs polygon **offsetting/inflating** and **Constrained Delaunay Triangulation**.
 
-This Rust port aims to provide identical functionality and performance characteristics to the original C++ implementation while leveraging Rust's memory safety and modern language features.
+This is a pure Rust port of the original [Clipper2 C++ library](https://github.com/AngusJohnson/Clipper2), aiming for identical functionality, algorithmic behavior, and performance characteristics while leveraging Rust's memory safety guarantees and modern language features.
+
+This port was created by [MatterHackers](https://www.matterhackers.com) using [Claude](https://www.anthropic.com/claude) by Anthropic.
 
 ## Features
 
-- **Boolean Operations**: Intersection, Union, Difference, XOR
+- **Boolean Operations**: Intersection, Union, Difference, XOR on both simple and complex polygons
 - **Polygon Offsetting**: Inflate/deflate polygons with various join types
+- **Constrained Delaunay Triangulation**: Triangulate polygons with constraints
 - **Rectangle Clipping**: High-performance rectangular clipping
 - **Path Simplification**: Reduce polygon complexity while preserving shape
 - **Multiple Precision**: Support for both integer (`i64`) and floating-point (`f64`) coordinates
 - **PolyTree Structure**: Hierarchical representation of polygon relationships
-- **Memory Safe**: All the benefits of Rust's ownership system
+- **Memory Safe**: All the benefits of Rust's ownership system with zero-cost abstractions
 
-## Implementation Status
+## Visual Examples
 
-🚧 **This project is currently under active development** 🚧
+**Clipping**
 
-Following a **ZERO TOLERANCE POLICY** for incomplete implementations:
-- ✅ **Core Types**: Basic geometric types and operations
-- ✅ **Version Info**: Library version constants  
-- 🚧 **Clipping Engine**: Main boolean operations engine
-- 🚧 **Polygon Offsetting**: Path inflation/deflation
-- 🚧 **Rectangle Clipping**: Optimized rectangular clipping
-- 🚧 **Minkowski Operations**: Advanced geometric operations
-- 🚧 **Export Utilities**: Data export functionality
+![clipperB](https://user-images.githubusercontent.com/5280692/178123810-1719a1f5-25c3-4a9e-b419-e575ff056272.svg)
 
-See [CLAUDE.md](CLAUDE.md) for implementation guidelines.
+**Inflating (aka Offsetting)**
+
+![rabbit](https://github.com/user-attachments/assets/a0f2f43c-f0a3-45ec-887d-d9ca34256088)
+![rabbit_offset](https://github.com/user-attachments/assets/ca05688e-293f-4596-86ab-df529694e778)
+
+**Constrained Delaunay Triangulation**
+
+![coral3](https://github.com/user-attachments/assets/78e88382-f772-442b-a09c-c14d8906fb21)
+![coral3t](https://github.com/user-attachments/assets/c329ef2a-4833-4092-8415-145400fba8b0)
+
+![coral3_t2](https://github.com/user-attachments/assets/fc1c8741-e033-4dc6-869a-c0d7da550cfa)
+
+## Documentation
+
+Comprehensive documentation for the Clipper2 algorithms and API is available at:
+
+<a href="https://www.angusj.com/clipper2/Docs/Overview.htm"><b>Clipper2 Documentation</b></a>
+
+The Rust API follows the same structure and naming conventions (adapted to Rust idioms) as the original C++ library, so the upstream documentation serves as an excellent reference.
 
 ## Quick Start
 
@@ -51,10 +64,10 @@ clipper2 = "0.1.0"
 ```rust
 use clipper2::*;
 
-// Create some polygons
+// Create subject and clip polygons
 let subject = vec![
     Point64::new(100, 100),
-    Point64::new(300, 100), 
+    Point64::new(300, 100),
     Point64::new(300, 300),
     Point64::new(100, 300),
 ];
@@ -62,12 +75,9 @@ let subject = vec![
 let clip = vec![
     Point64::new(200, 200),
     Point64::new(400, 200),
-    Point64::new(400, 400), 
+    Point64::new(400, 400),
     Point64::new(200, 400),
 ];
-
-// Note: Full clipping operations not yet implemented
-// This is a preview of the planned API
 ```
 
 ## Architecture
@@ -76,7 +86,7 @@ let clip = vec![
 
 The library supports two coordinate systems:
 
-- **`Path64`/`Paths64`**: Integer coordinates using `i64` 
+- **`Path64`/`Paths64`**: Integer coordinates using `i64`
 - **`PathD`/`PathsD`**: Floating-point coordinates using `f64`
 
 ### Key Types
@@ -107,7 +117,7 @@ pub struct RectD { /* ... */ }
 ### Building
 
 ```bash
-git clone https://github.com/your-username/clipper2-rust.git
+git clone https://github.com/MatterHackers/clipper2-rust.git
 cd clipper2-rust
 cargo build
 ```
@@ -126,57 +136,30 @@ cargo bench
 
 ## Implementation Philosophy
 
-This project follows **extremely strict implementation rules**:
+This project follows strict implementation rules to ensure fidelity with the original C++ library:
 
-1. **No Stubs**: Every function must be complete and production-ready
-2. **Dependency-Driven**: Functions only implemented when all dependencies are ready
-3. **Comprehensive Testing**: 100% test coverage with exact C++ behavioral matching
-4. **Zero Tolerance**: No compromises, shortcuts, or "good enough" implementations
+1. **Exact Behavioral Matching**: The Rust implementation must match C++ behavior exactly — same algorithms, same mathematical precision, same edge case handling
+2. **No Stubs**: Every function must be complete and production-ready
+3. **Dependency-Driven**: Functions are only implemented when all dependencies are ready
+4. **Comprehensive Testing**: Tests verify exact behavioral match with the C++ implementation
 
 See [CLAUDE.md](CLAUDE.md) for complete implementation guidelines.
 
-## Performance
-
-Target performance characteristics:
-- Match or exceed C++ Clipper2 performance
-- Leverage Rust's zero-cost abstractions
-- Optimize for modern CPU architectures
-- Comprehensive benchmarking against reference implementation
-
 ## Contributing
 
-Contributions are welcome! However, please note the strict implementation requirements:
+Contributions are welcome! Please note the strict implementation requirements:
 
-1. All functions must be **complete** - no `todo!()` or stubs
-2. Comprehensive tests required before marking functions as implemented
+1. All functions must be **complete** — no `todo!()` or stubs
+2. Comprehensive tests required for all functionality
 3. Must exactly match C++ behavioral semantics
 4. Follow the dependency-driven implementation order
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
 ## License
 
-This project is licensed under the Boost Software License 1.0 - see the [LICENSE](LICENSE) file for details.
-
-This is the same license as the original Clipper2 C++ library.
+This project is licensed under the [Boost Software License 1.0](https://www.boost.org/LICENSE_1_0.txt), the same license as the original Clipper2 C++ library.
 
 ## Acknowledgments
 
-- **Angus Johnson** - Original Clipper2 C++ library author
-- **Clipper2 Community** - Testing, feedback, and contributions to the original library
-
-## Related Projects
-
-- [Clipper2 C++](https://github.com/AngusJohnson/Clipper2) - Original implementation
-- [clipper-sys](https://crates.io/crates/clipper-sys) - Rust bindings to C++ Clipper
-- [geo](https://crates.io/crates/geo) - Rust geospatial primitives and algorithms
-
-## Status Updates
-
-For the latest implementation status and progress updates, see:
-- [Issues](https://github.com/your-username/clipper2-rust/issues) - Bug reports and feature requests
-- [Discussions](https://github.com/your-username/clipper2-rust/discussions) - Community discussions
-
----
-
-**Note**: This library is currently in early development. APIs may change before 1.0 release.
+- **[Angus Johnson](https://www.angusj.com)** — Author of the original [Clipper2](https://github.com/AngusJohnson/Clipper2) library
+- **[MatterHackers](https://www.matterhackers.com)** — Developed this Rust port
+- **[Claude](https://www.anthropic.com/claude) by Anthropic** — AI assistant used to perform the port

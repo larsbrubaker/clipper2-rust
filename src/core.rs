@@ -450,6 +450,21 @@ where
     }
 }
 
+// Implement + operator for Rect (union operation)
+// Direct port from clipper.core.h line 392
+impl<T> std::ops::Add for Rect<T>
+where
+    T: Num + Copy + PartialOrd,
+{
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        let mut result = self;
+        result += other;
+        result
+    }
+}
+
 // Type aliases matching C++ implementation
 pub type Point64 = Point<i64>;
 pub type PointD = Point<f64>;
