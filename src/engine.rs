@@ -2472,11 +2472,7 @@ impl ClipperBase {
                 while left_scan != l_end && right_scan != r_end.unwrap_or(NONE) {
                     if self.active_arena[right_scan].curr_x < self.active_arena[left_scan].curr_x {
                         let mut tmp = self.active_arena[right_scan].prev_in_sel;
-                        loop {
-                            let tmp_idx = match tmp {
-                                Some(idx) => idx,
-                                None => break, // Safety: SEL list ended before finding left_scan
-                            };
+                        while let Some(tmp_idx) = tmp {
                             self.add_new_intersect_node(tmp_idx, right_scan, top_y);
                             if tmp_idx == left_scan {
                                 break;

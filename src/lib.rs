@@ -24,6 +24,7 @@ pub mod version;
 pub mod clipper;
 pub mod minkowski;
 pub mod offset;
+pub mod utils;
 
 // Future modules to implement in dependency order (NO STUBS ALLOWED):
 // pub mod export;   // clipper.export.h - Export utilities

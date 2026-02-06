@@ -575,9 +575,7 @@ pub fn trim_collinear_64(p: &Path64, is_open_path: bool) -> Path64 {
         src_idx += 1;
     }
 
-    if is_open_path {
-        dst.push(p[stop]);
-    } else if !is_collinear(p[prev_idx], p[stop], dst[0]) {
+    if is_open_path || !is_collinear(p[prev_idx], p[stop], dst[0]) {
         dst.push(p[stop]);
     } else {
         while dst.len() > 2 && is_collinear(dst[dst.len() - 1], dst[dst.len() - 2], dst[0]) {

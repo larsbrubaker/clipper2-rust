@@ -715,8 +715,8 @@ fn test_offset_with_delta_callback() {
     co.add_path(&square, JoinType::Miter, EndType::Polygon);
 
     // Constant callback - should behave the same as fixed delta
-    let cb: Box<dyn Fn(&Path64, &crate::core::PathD, usize, usize) -> f64> =
-        Box::new(|_path, _norms, _j, _k| 10.0);
+    type DeltaCallback = Box<dyn Fn(&Path64, &crate::core::PathD, usize, usize) -> f64>;
+    let cb: DeltaCallback = Box::new(|_path, _norms, _j, _k| 10.0);
 
     let mut result = Paths64::new();
     co.execute_with_callback(cb, &mut result);

@@ -63,11 +63,7 @@ fn minkowski_internal(pattern: &Path64, path: &Path64, is_sum: bool, is_closed: 
     while i < path_len {
         let mut h: usize = pat_len - 1;
         for j in 0..pat_len {
-            let mut quad: Path64 = Vec::with_capacity(4);
-            quad.push(tmp[g][h]);
-            quad.push(tmp[i][h]);
-            quad.push(tmp[i][j]);
-            quad.push(tmp[g][j]);
+            let mut quad: Path64 = vec![tmp[g][h], tmp[i][h], tmp[i][j], tmp[g][j]];
 
             if !is_positive(&quad) {
                 quad.reverse();

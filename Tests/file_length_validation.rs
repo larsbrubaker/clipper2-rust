@@ -295,10 +295,7 @@ mod file_metrics {
         let project_root = std::env::current_dir().unwrap();
 
         // Check for essential project files
-        let essential_files = [
-            "Cargo.toml",
-            "CLAUDE.md",
-        ];
+        let essential_files = ["Cargo.toml", "CLAUDE.md"];
 
         for file in essential_files {
             let file_path = project_root.join(file);

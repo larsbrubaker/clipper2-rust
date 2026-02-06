@@ -698,7 +698,7 @@ fn test_minkowski_sum_many_sided_polygon() {
         total_area
     );
     // Verify the outer boundary is larger than the original square
-    let outer_area = result.iter().map(|p| area(p)).filter(|a| *a > 0.0).sum::<f64>();
+    let outer_area = result.iter().map(area).filter(|a| *a > 0.0).sum::<f64>();
     assert!(
         outer_area > 10000.0,
         "Outer boundary area should be > original square area, got {}",
@@ -754,8 +754,13 @@ fn test_minkowski_internal_axis_aligned_squares_produce_degenerate_quads() {
     // Union of the quads produces a frame shape (outer boundary with hole)
     let result = union_paths(&quads, FillRule::NonZero);
     assert_eq!(result.len(), 2, "Should produce outer boundary + hole");
-    let outer_area = result.iter().map(|p| area(p)).filter(|a| *a > 0.0).sum::<f64>();
-    let hole_area = result.iter().map(|p| area(p)).filter(|a| *a < 0.0).sum::<f64>().abs();
+    let outer_area = result.iter().map(area).filter(|a| *a > 0.0).sum::<f64>();
+    let hole_area = result
+        .iter()
+        .map(area)
+        .filter(|a| *a < 0.0)
+        .sum::<f64>()
+        .abs();
     assert!((outer_area - 14400.0).abs() < 100.0);
     assert!((hole_area - 6400.0).abs() < 100.0);
 }

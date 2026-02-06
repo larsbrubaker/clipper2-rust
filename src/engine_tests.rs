@@ -678,7 +678,10 @@ fn test_clipper64_intersection_two_overlapping_squares() {
     c.add_clip(&vec![clip]);
     let mut result = Paths64::new();
     c.execute(ClipType::Intersection, FillRule::NonZero, &mut result, None);
-    assert!(!result.is_empty(), "Intersection of overlapping squares must not be empty");
+    assert!(
+        !result.is_empty(),
+        "Intersection of overlapping squares must not be empty"
+    );
     let total_area: f64 = result.iter().map(|p| area(p).abs()).sum();
     assert!(
         (total_area - 22500.0).abs() < 100.0,
@@ -708,7 +711,10 @@ fn test_clipper64_difference_two_overlapping_squares() {
     c.add_clip(&vec![clip]);
     let mut result = Paths64::new();
     c.execute(ClipType::Difference, FillRule::NonZero, &mut result, None);
-    assert!(!result.is_empty(), "Difference of overlapping squares must not be empty");
+    assert!(
+        !result.is_empty(),
+        "Difference of overlapping squares must not be empty"
+    );
     let total_area: f64 = result.iter().map(|p| area(p).abs()).sum();
     assert!(
         (total_area - 17500.0).abs() < 100.0,
@@ -737,7 +743,10 @@ fn test_clipper64_union_two_overlapping_squares() {
     c.add_clip(&vec![clip]);
     let mut result = Paths64::new();
     c.execute(ClipType::Union, FillRule::NonZero, &mut result, None);
-    assert!(!result.is_empty(), "Union of overlapping squares must not be empty");
+    assert!(
+        !result.is_empty(),
+        "Union of overlapping squares must not be empty"
+    );
     let total_area: f64 = result.iter().map(|p| area(p).abs()).sum();
     assert!(
         (total_area - 57500.0).abs() < 100.0,
@@ -767,7 +776,10 @@ fn test_clipper64_xor_two_overlapping_squares() {
     c.add_clip(&vec![clip]);
     let mut result = Paths64::new();
     c.execute(ClipType::Xor, FillRule::NonZero, &mut result, None);
-    assert!(!result.is_empty(), "Xor of overlapping squares must not be empty");
+    assert!(
+        !result.is_empty(),
+        "Xor of overlapping squares must not be empty"
+    );
     let total_area: f64 = result.iter().map(|p| area(p).abs()).sum();
     assert!(
         (total_area - 35000.0).abs() < 100.0,

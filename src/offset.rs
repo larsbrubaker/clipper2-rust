@@ -85,14 +85,14 @@ fn get_lowest_closed_path_info(paths: &Paths64) -> (Option<usize>, bool) {
     let mut bot_pt = Point64::new(i64::MAX, i64::MIN);
     let mut is_neg_area = false;
 
-    for i in 0..paths.len() {
+    for (i, path_i) in paths.iter().enumerate() {
         let mut a: f64 = f64::MAX;
-        for pt in &paths[i] {
+        for pt in path_i {
             if (pt.y < bot_pt.y) || (pt.y == bot_pt.y && pt.x >= bot_pt.x) {
                 continue;
             }
             if a == f64::MAX {
-                a = area(&paths[i]);
+                a = area(path_i);
                 if a == 0.0 {
                     break; // invalid closed path
                 }
@@ -576,15 +576,14 @@ impl ClipperOffset {
     /// Square join implementation.
     /// Direct port from ClipperOffset::DoSquare (clipper.offset.cpp line 218-256).
     fn do_square(&mut self, path: &Path64, j: usize, k: usize) {
-        let vec: PointD;
-        if j == k {
-            vec = PointD::new(self.norms[j].y, -self.norms[j].x);
+        let vec: PointD = if j == k {
+            PointD::new(self.norms[j].y, -self.norms[j].x)
         } else {
-            vec = get_avg_unit_vector(
+            get_avg_unit_vector(
                 &PointD::new(-self.norms[k].y, self.norms[k].x),
                 &PointD::new(self.norms[j].y, -self.norms[j].x),
-            );
-        }
+            )
+        };
 
         let abs_delta = self.group_delta.abs();
 
