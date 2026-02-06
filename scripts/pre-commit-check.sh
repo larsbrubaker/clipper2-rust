@@ -120,21 +120,6 @@ if [ -d "benches" ]; then
     fi
 fi
 
-# Database verification check if function_verifier exists
-if [ -f "function_verifier.py" ]; then
-    if command_exists python; then
-        echo -e "\n${YELLOW}🗄️  Running database verification...${NC}"
-        if python function_verifier.py; then
-            echo -e "${GREEN}✅ Database verification successful${NC}"
-        else
-            echo -e "${RED}❌ Database verification failed${NC}"
-            EXIT_CODE=1
-        fi
-    else
-        echo -e "\n${YELLOW}⚠️  Python not available, skipping database verification${NC}"
-    fi
-fi
-
 echo
 if [ $EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}🎉 All pre-commit checks passed!${NC}"
@@ -148,7 +133,6 @@ else
     echo -e "${WHITE}   • cargo clippy --fix --all-targets        - Fix clippy warnings automatically${NC}"
     echo -e "${WHITE}   • cargo test file_length_validation       - Check file lengths${NC}"
     echo -e "${WHITE}   • cargo bench --no-run                    - Build benchmarks without running${NC}"
-    echo -e "${WHITE}   • python function_verifier.py             - Verify function database completeness${NC}"
 fi
 
 exit $EXIT_CODE

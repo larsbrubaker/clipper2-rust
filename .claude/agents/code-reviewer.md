@@ -15,7 +15,6 @@ This is **clipper2-rust**, a strict port of the Clipper2 C++ computational geome
 - Port of Clipper2 (polygon clipping, offsetting, rect-clipping, Minkowski operations)
 - Must match C++ behavior exactly — same algorithms, same precision, same edge cases
 - Uses integer coordinates (i64) and floating-point coordinates (f64)
-- Implementation tracked in SQLite database (`clipper2_complete.db`)
 - C++ source in `CPP/` directory for reference
 
 ## When Invoked
@@ -82,7 +81,7 @@ Organize feedback by priority:
 - [ ] Comprehensive tests exist for the function
 - [ ] Edge cases covered (empty inputs, single-point paths, collinear points)
 - [ ] Tests verify exact match with C++ behavior
-- [ ] Database updated (`rust_implemented`, `rust_tested`)
+- [ ] All called functions are already implemented and tested
 
 ## CLAUDE.md Alignment
 

@@ -35,9 +35,7 @@ Following a **ZERO TOLERANCE POLICY** for incomplete implementations:
 - 🚧 **Minkowski Operations**: Advanced geometric operations
 - 🚧 **Export Utilities**: Data export functionality
 
-**Progress**: 2/857 total items implemented (790 functions + 56 classes + 11 enums)
-
-See [IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md) for detailed progress tracking.
+See [CLAUDE.md](CLAUDE.md) for implementation guidelines.
 
 ## Quick Start
 
@@ -133,8 +131,7 @@ This project follows **extremely strict implementation rules**:
 1. **No Stubs**: Every function must be complete and production-ready
 2. **Dependency-Driven**: Functions only implemented when all dependencies are ready
 3. **Comprehensive Testing**: 100% test coverage with exact C++ behavioral matching
-4. **Database Tracking**: All progress tracked in SQLite database
-5. **Zero Tolerance**: No compromises, shortcuts, or "good enough" implementations
+4. **Zero Tolerance**: No compromises, shortcuts, or "good enough" implementations
 
 See [CLAUDE.md](CLAUDE.md) for complete implementation guidelines.
 
@@ -177,7 +174,6 @@ This is the same license as the original Clipper2 C++ library.
 ## Status Updates
 
 For the latest implementation status and progress updates, see:
-- [PROJECT_STATUS.md](PROJECT_STATUS.md) - Current implementation status
 - [Issues](https://github.com/your-username/clipper2-rust/issues) - Bug reports and feature requests
 - [Discussions](https://github.com/your-username/clipper2-rust/discussions) - Community discussions
 

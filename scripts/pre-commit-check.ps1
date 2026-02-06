@@ -143,27 +143,6 @@ if (Test-Path "benches") {
     }
 }
 
-# Database verification check if function_verifier exists
-if (Test-Path "function_verifier.py") {
-    if (Test-Command "python") {
-        Write-Host "`n🗄️  Running database verification..." -ForegroundColor Yellow
-        try {
-            python function_verifier.py
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "✅ Database verification successful" -ForegroundColor Green
-            } else {
-                Write-Host "❌ Database verification failed" -ForegroundColor Red
-                $exitCode = 1
-            }
-        } catch {
-            Write-Host "❌ Database verification check failed: $_" -ForegroundColor Red
-            $exitCode = 1
-        }
-    } else {
-        Write-Host "⚠️  Python not available, skipping database verification" -ForegroundColor Yellow
-    }
-}
-
 Write-Host "`n" -NoNewline
 if ($exitCode -eq 0) {
     Write-Host "🎉 All pre-commit checks passed!" -ForegroundColor Green
@@ -177,7 +156,6 @@ if ($exitCode -eq 0) {
     Write-Host "   • cargo clippy --fix --all-targets        - Fix clippy warnings automatically" -ForegroundColor White
     Write-Host "   • cargo test file_length_validation       - Check file lengths" -ForegroundColor White
     Write-Host "   • cargo bench --no-run                    - Build benchmarks without running" -ForegroundColor White
-    Write-Host "   • python function_verifier.py             - Verify function database completeness" -ForegroundColor White
 }
 
 exit $exitCode

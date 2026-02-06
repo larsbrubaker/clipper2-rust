@@ -298,8 +298,6 @@ mod file_metrics {
         let essential_files = [
             "Cargo.toml",
             "CLAUDE.md",
-            "clipper2_complete.db",
-            "function_verifier.py",
         ];
 
         for file in essential_files {

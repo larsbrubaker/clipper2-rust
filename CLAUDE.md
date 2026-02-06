@@ -73,21 +73,9 @@ This project is a strict port of the Clipper2 C++ library to Rust. These rules e
 
 ### Dependency-Ordered Implementation
 Before implementing any function:
-1. Query the database (`clipper2_complete.db`) for all functions called by the target function
-2. Verify all dependencies are marked `rust_implemented = 1` AND `rust_tested = 1`
+1. Read the corresponding C++ source to identify all functions called by the target function
+2. Verify all dependencies are already implemented and tested in the Rust codebase
 3. If any dependency is incomplete, implement dependencies first
-
-### Database Tracking
-- Every implementation step must be tracked in the SQLite database (`clipper2_complete.db`)
-- Functions marked as `rust_implemented = 1` must be genuinely complete
-- Functions marked as `rust_tested = 1` must have comprehensive passing tests
-- Only mark as complete when requirements are 100% met
-
-### Verification
-Before any implementation session:
-```bash
-python function_verifier.py
-```
 
 ### Forbidden Patterns
 - `todo!()` or `unimplemented!()` macros
@@ -97,10 +85,6 @@ python function_verifier.py
 - Marking functions complete prematurely
 - "Close enough" or "good enough for now" implementations
 
-## Implementation Database
+## C++ Reference
 
-Complete analysis database: `clipper2_complete.db`
-- **790 functions** total across all files
-- **56 classes/structs**
-- **11 enums**
-- **857 total items** to implement
+Original C++ source code is in the `CPP/` directory for reference during porting.

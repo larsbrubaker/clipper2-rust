@@ -216,15 +216,6 @@ fn test_cross_product_precision() {
 }
 ```
 
-## Database Integration
-
-After writing and verifying tests, update the tracking database:
-
-```bash
-# Mark function as tested
-python update_progress.py --function "function_name" --tested
-```
-
 ## Bug Fix Workflow: Failing Test First
 
 **When fixing a bug, always write a failing test before writing the fix.**
