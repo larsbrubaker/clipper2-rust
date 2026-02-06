@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: phase7-offset
     content: "Phase 7: Offset module (JoinType, EndType enums, ClipperOffset with all join/end type handling, Group struct)"
-    status: in_progress
+    status: completed
   - id: phase8-minkowski
     content: "Phase 8: Minkowski module (MinkowskiSum, MinkowskiDiff for Path64 and PathD)"
     status: pending

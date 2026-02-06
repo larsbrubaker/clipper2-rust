@@ -1026,6 +1026,38 @@ pub fn get_segment_intersect_pt(
     true
 }
 
+/// Calculate intersection point between two line segments for PointD (floating-point)
+/// Direct port from clipper.core.h line 952 (floating-point specialization)
+#[inline]
+pub fn get_segment_intersect_pt_d(
+    ln1a: PointD,
+    ln1b: PointD,
+    ln2a: PointD,
+    ln2b: PointD,
+    ip: &mut PointD,
+) -> bool {
+    // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
+    let dx1 = ln1b.x - ln1a.x;
+    let dy1 = ln1b.y - ln1a.y;
+    let dx2 = ln2b.x - ln2a.x;
+    let dy2 = ln2b.y - ln2a.y;
+
+    let det = dy1 * dx2 - dy2 * dx1;
+    if det == 0.0 {
+        return false;
+    }
+    let t = ((ln1a.x - ln2a.x) * dy2 - (ln1a.y - ln2a.y) * dx2) / det;
+    if t <= 0.0 {
+        *ip = ln1a;
+    } else if t >= 1.0 {
+        *ip = ln1b;
+    } else {
+        ip.x = ln1a.x + t * dx1;
+        ip.y = ln1a.y + t * dy1;
+    }
+    true
+}
+
 /// Test if three points are collinear (lie on the same straight line)
 /// Direct port from clipper.core.h line 796 - simplified version for Point64
 #[inline]
@@ -1563,6 +1595,77 @@ where
         return 0.0;
     }
     sqr(a * d - c * b) / (c * c + d * d)
+}
+
+/// Generate an elliptical path around a center point
+/// Direct port from clipper.h line 613 (Ellipse template function)
+pub fn ellipse_point64(center: Point64, radius_x: f64, radius_y: f64, steps: usize) -> Path64 {
+    if radius_x <= 0.0 {
+        return Path64::new();
+    }
+    let radius_y = if radius_y <= 0.0 { radius_x } else { radius_y };
+    let steps = if steps <= 2 {
+        (constants::PI * ((radius_x + radius_y) / 2.0).sqrt()) as usize
+    } else {
+        steps
+    };
+    if steps == 0 {
+        return Path64::new();
+    }
+
+    let si = (2.0 * constants::PI / steps as f64).sin();
+    let co = (2.0 * constants::PI / steps as f64).cos();
+    let mut dx = co;
+    let mut dy = si;
+    let mut result = Path64::with_capacity(steps);
+    result.push(Point64::new(
+        (center.x as f64 + radius_x).round() as i64,
+        center.y,
+    ));
+    for _ in 1..steps {
+        result.push(Point64::new(
+            (center.x as f64 + radius_x * dx).round() as i64,
+            (center.y as f64 + radius_y * dy).round() as i64,
+        ));
+        let x = dx * co - dy * si;
+        dy = dy * co + dx * si;
+        dx = x;
+    }
+    result
+}
+
+/// Generate an elliptical path around a center point (PointD version)
+/// Direct port from clipper.h line 613 (Ellipse template function)
+pub fn ellipse_point_d(center: PointD, radius_x: f64, radius_y: f64, steps: usize) -> PathD {
+    if radius_x <= 0.0 {
+        return PathD::new();
+    }
+    let radius_y = if radius_y <= 0.0 { radius_x } else { radius_y };
+    let steps = if steps <= 2 {
+        (constants::PI * ((radius_x + radius_y) / 2.0).sqrt()) as usize
+    } else {
+        steps
+    };
+    if steps == 0 {
+        return PathD::new();
+    }
+
+    let si = (2.0 * constants::PI / steps as f64).sin();
+    let co = (2.0 * constants::PI / steps as f64).cos();
+    let mut dx = co;
+    let mut dy = si;
+    let mut result = PathD::with_capacity(steps);
+    result.push(PointD::new(center.x + radius_x, center.y));
+    for _ in 1..steps {
+        result.push(PointD::new(
+            center.x + radius_x * dx,
+            center.y + radius_y * dy,
+        ));
+        let x = dx * co - dy * si;
+        dy = dy * co + dx * si;
+        dx = x;
+    }
+    result
 }
 
 // Include tests from separate file

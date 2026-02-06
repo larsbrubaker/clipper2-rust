@@ -21,8 +21,9 @@ pub mod engine_public;
 pub mod rectclip;
 pub mod version;
 
+pub mod offset;
+
 // Future modules to implement in dependency order (NO STUBS ALLOWED):
-// pub mod offset;   // clipper.offset.h - Path offsetting
 // pub mod minkowski; // clipper.minkowski.h - Minkowski operations
 // pub mod export;   // clipper.export.h - Export utilities
 
@@ -31,5 +32,6 @@ pub use core::*;
 pub use engine::*;
 pub use engine_fns::*;
 pub use engine_public::*;
+pub use offset::*;
 pub use rectclip::*;
 pub use version::*;
