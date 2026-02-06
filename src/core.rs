@@ -22,6 +22,18 @@ pub enum FillRule {
     Negative,
 }
 
+/// Location of a point relative to a rectangle
+/// Direct port from clipper.rectclip.h line 20
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(C)]
+pub enum Location {
+    Left,
+    Top,
+    Right,
+    Bottom,
+    Inside,
+}
+
 /// Exception type for Clipper2 errors
 /// Direct port from clipper.core.h line 27
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -928,6 +940,629 @@ where
     T: Copy + ToF64,
 {
     area(poly) >= 0.0
+}
+
+/// Get the location of a point relative to a rectangle
+/// Returns false if the point is on the rectangle edge, true otherwise
+/// Direct port from clipper.rectclip.cpp line 37
+#[inline]
+pub fn get_location(rec: &Rect64, pt: &Point64, loc: &mut Location) -> bool {
+    if pt.x == rec.left && pt.y >= rec.top && pt.y <= rec.bottom {
+        *loc = Location::Left;
+        return false;
+    } else if pt.x == rec.right && pt.y >= rec.top && pt.y <= rec.bottom {
+        *loc = Location::Right;
+        return false;
+    } else if pt.y == rec.top && pt.x >= rec.left && pt.x <= rec.right {
+        *loc = Location::Top;
+        return false;
+    } else if pt.y == rec.bottom && pt.x >= rec.left && pt.x <= rec.right {
+        *loc = Location::Bottom;
+        return false;
+    } else if pt.x < rec.left {
+        *loc = Location::Left;
+    } else if pt.x > rec.right {
+        *loc = Location::Right;
+    } else if pt.y < rec.top {
+        *loc = Location::Top;
+    } else if pt.y > rec.bottom {
+        *loc = Location::Bottom;
+    } else {
+        *loc = Location::Inside;
+    }
+    true
+}
+
+/// Check if a line segment between two points is horizontal
+/// Returns true if both points have the same y-coordinate
+/// Direct port from clipper.rectclip.cpp line 68
+#[inline]
+pub fn is_horizontal(pt1: &Point64, pt2: &Point64) -> bool {
+    pt1.y == pt2.y
+}
+
+/// Result of point-in-polygon test
+/// Direct port from clipper.core.h line 1046
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(C)]
+pub enum PointInPolygonResult {
+    IsOn,
+    IsInside,
+    IsOutside,
+}
+
+/// Calculate exact intersection point between two line segments for Point64
+/// Direct port from clipper.core.h line 902 - simplified version for i64 coordinates
+#[inline]
+pub fn get_segment_intersect_pt(
+    ln1a: Point64,
+    ln1b: Point64,
+    ln2a: Point64,
+    ln2b: Point64,
+    ip: &mut Point64,
+) -> bool {
+    // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
+    let dx1 = ln1b.x as f64 - ln1a.x as f64;
+    let dy1 = ln1b.y as f64 - ln1a.y as f64;
+    let dx2 = ln2b.x as f64 - ln2a.x as f64;
+    let dy2 = ln2b.y as f64 - ln2a.y as f64;
+
+    let det = dy1 * dx2 - dy2 * dx1;
+    if det == 0.0 {
+        return false;
+    }
+
+    let t = ((ln1a.x as f64 - ln2a.x as f64) * dy2 - (ln1a.y as f64 - ln2a.y as f64) * dx2) / det;
+
+    if t <= 0.0 {
+        *ip = ln1a;
+    } else if t >= 1.0 {
+        *ip = ln1b;
+    } else {
+        ip.x = (ln1a.x as f64 + t * dx1).round() as i64;
+        ip.y = (ln1a.y as f64 + t * dy1).round() as i64;
+    }
+
+    true
+}
+
+/// Test if three points are collinear (lie on the same straight line)
+/// Direct port from clipper.core.h line 796 - simplified version for Point64
+#[inline]
+pub fn is_collinear(pt1: Point64, shared_pt: Point64, pt2: Point64) -> bool {
+    let a = shared_pt.x - pt1.x;
+    let b = pt2.y - shared_pt.y;
+    let c = shared_pt.y - pt1.y;
+    let d = pt2.x - shared_pt.x;
+
+    // When checking for collinearity with very large coordinate values
+    // ProductsAreEqual is more accurate than using CrossProduct
+    products_are_equal(a, b, c, d)
+}
+
+/// Determine if a point is inside, on the boundary, or outside a polygon
+/// Direct port from clipper.core.h line 1049 - simplified version for Point64
+/// Uses the winding number algorithm with proper edge case handling
+#[inline]
+pub fn point_in_polygon(pt: Point64, polygon: &Path64) -> PointInPolygonResult {
+    if polygon.len() < 3 {
+        return PointInPolygonResult::IsOutside;
+    }
+
+    let mut val = 0i32;
+    let mut first_idx = 0;
+
+    // Find first vertex with different y coordinate than pt
+    while first_idx < polygon.len() && polygon[first_idx].y == pt.y {
+        first_idx += 1;
+    }
+
+    if first_idx == polygon.len() {
+        // Not a proper polygon - all points have same y as test point
+        return PointInPolygonResult::IsOutside;
+    }
+
+    let mut is_above = polygon[first_idx].y < pt.y;
+    let starting_above = is_above;
+    let mut curr_idx = (first_idx + 1) % polygon.len();
+    let mut wrap_to_start = false;
+
+    loop {
+        // Handle wrapping around the polygon
+        if curr_idx == polygon.len() {
+            if wrap_to_start || first_idx == 0 {
+                break;
+            }
+            wrap_to_start = true;
+            curr_idx = 0;
+        }
+
+        // Skip vertices while moving in same direction relative to pt.y
+        if is_above {
+            while curr_idx != polygon.len()
+                && (!wrap_to_start || curr_idx < first_idx)
+                && polygon[curr_idx].y < pt.y
+            {
+                curr_idx += 1;
+            }
+            if curr_idx == polygon.len() || (wrap_to_start && curr_idx >= first_idx) {
+                continue;
+            }
+        } else {
+            while curr_idx != polygon.len()
+                && (!wrap_to_start || curr_idx < first_idx)
+                && polygon[curr_idx].y > pt.y
+            {
+                curr_idx += 1;
+            }
+            if curr_idx == polygon.len() || (wrap_to_start && curr_idx >= first_idx) {
+                continue;
+            }
+        }
+
+        let curr = &polygon[curr_idx];
+        let prev_idx = if curr_idx == 0 {
+            polygon.len() - 1
+        } else {
+            curr_idx - 1
+        };
+        let prev = &polygon[prev_idx];
+
+        if curr.y == pt.y {
+            if curr.x == pt.x || (curr.y == prev.y && ((pt.x < prev.x) != (pt.x < curr.x))) {
+                return PointInPolygonResult::IsOn;
+            }
+            curr_idx += 1;
+            if curr_idx == first_idx {
+                break;
+            }
+            continue;
+        }
+
+        if pt.x < curr.x && pt.x < prev.x {
+            // We're only interested in edges crossing on the left
+        } else if pt.x > prev.x && pt.x > curr.x {
+            val = 1 - val; // Toggle val
+        } else {
+            let d = cross_product_three_points(*prev, *curr, pt);
+            if d == 0.0 {
+                return PointInPolygonResult::IsOn;
+            }
+            if (d < 0.0) == is_above {
+                val = 1 - val;
+            }
+        }
+
+        is_above = !is_above;
+        curr_idx += 1;
+    }
+
+    // Final edge case check
+    if is_above != starting_above {
+        let curr_idx = if curr_idx >= polygon.len() {
+            0
+        } else {
+            curr_idx
+        };
+        let prev_idx = if curr_idx == 0 {
+            polygon.len() - 1
+        } else {
+            curr_idx - 1
+        };
+        let curr = &polygon[curr_idx];
+        let prev = &polygon[prev_idx];
+        let d = cross_product_three_points(*prev, *curr, pt);
+        if d == 0.0 {
+            return PointInPolygonResult::IsOn;
+        }
+        if (d < 0.0) == is_above {
+            val = 1 - val;
+        }
+    }
+
+    if val == 0 {
+        PointInPolygonResult::IsOutside
+    } else {
+        PointInPolygonResult::IsInside
+    }
+}
+
+/// Get bounding rectangle for a single path - using existing implementation
+/// Direct port from clipper.core.h line 432 (template function)
+pub use get_bounds_path as get_bounds;
+
+/// Trait for converting from f64 with appropriate rounding behavior
+/// Matches C++ Point<T> constructor semantics: rounds for integral types, casts for float
+pub trait FromF64: Copy {
+    fn from_f64(val: f64) -> Self;
+    fn is_integral() -> bool;
+}
+
+impl FromF64 for i64 {
+    #[inline]
+    fn from_f64(val: f64) -> Self {
+        val.round() as i64
+    }
+    #[inline]
+    fn is_integral() -> bool {
+        true
+    }
+}
+
+impl FromF64 for f64 {
+    #[inline]
+    fn from_f64(val: f64) -> Self {
+        val
+    }
+    #[inline]
+    fn is_integral() -> bool {
+        false
+    }
+}
+
+/// Scale a rectangle with type conversion
+/// Direct port from clipper.core.h line 405
+#[inline]
+pub fn scale_rect<T1, T2>(rect: &Rect<T2>, scale: f64) -> Rect<T1>
+where
+    T1: Num + Copy + PartialOrd + FromF64,
+    T2: Copy + ToF64,
+{
+    Rect {
+        left: T1::from_f64(rect.left.to_f64() * scale),
+        top: T1::from_f64(rect.top.to_f64() * scale),
+        right: T1::from_f64(rect.right.to_f64() * scale),
+        bottom: T1::from_f64(rect.bottom.to_f64() * scale),
+    }
+}
+
+/// Scale a path with type conversion and separate x/y scales
+/// Direct port from clipper.core.h line 523
+#[inline]
+pub fn scale_path<T1, T2>(
+    path: &Path<T2>,
+    scale_x: f64,
+    scale_y: f64,
+    error_code: &mut i32,
+) -> Path<T1>
+where
+    T1: Num + Copy + PartialOrd + FromF64,
+    T2: Copy + ToF64,
+{
+    let mut sx = scale_x;
+    let mut sy = scale_y;
+
+    if sx == 0.0 || sy == 0.0 {
+        *error_code |= errors::SCALE_ERROR_I;
+        // if no exception, treat as non-fatal error
+        if sx == 0.0 {
+            sx = 1.0;
+        }
+        if sy == 0.0 {
+            sy = 1.0;
+        }
+    }
+
+    let mut result = Vec::with_capacity(path.len());
+    for pt in path {
+        result.push(Point {
+            x: T1::from_f64(pt.x.to_f64() * sx),
+            y: T1::from_f64(pt.y.to_f64() * sy),
+        });
+    }
+    result
+}
+
+/// Scale a path with uniform scale
+/// Direct port from clipper.core.h line 550
+#[inline]
+pub fn scale_path_uniform<T1, T2>(path: &Path<T2>, scale: f64, error_code: &mut i32) -> Path<T1>
+where
+    T1: Num + Copy + PartialOrd + FromF64,
+    T2: Copy + ToF64,
+{
+    scale_path(path, scale, scale, error_code)
+}
+
+/// Scale multiple paths with type conversion and separate x/y scales
+/// Includes range checking for integral output types
+/// Direct port from clipper.core.h line 557
+#[inline]
+pub fn scale_paths<T1, T2>(
+    paths: &Paths<T2>,
+    scale_x: f64,
+    scale_y: f64,
+    error_code: &mut i32,
+) -> Paths<T1>
+where
+    T1: Num + Copy + PartialOrd + FromF64,
+    T2: Copy + ToF64,
+{
+    // Range check for integral output types
+    if T1::is_integral() {
+        // Compute bounds using ToF64 trait
+        let mut xmin = f64::MAX;
+        let mut ymin = f64::MAX;
+        let mut xmax = f64::MIN;
+        let mut ymax = f64::MIN;
+        for path in paths {
+            for p in path {
+                let x = p.x.to_f64();
+                let y = p.y.to_f64();
+                if x < xmin {
+                    xmin = x;
+                }
+                if x > xmax {
+                    xmax = x;
+                }
+                if y < ymin {
+                    ymin = y;
+                }
+                if y > ymax {
+                    ymax = y;
+                }
+            }
+        }
+        if (xmin * scale_x) < constants::MIN_COORD_D
+            || (xmax * scale_x) > constants::MAX_COORD_D
+            || (ymin * scale_y) < constants::MIN_COORD_D
+            || (ymax * scale_y) > constants::MAX_COORD_D
+        {
+            *error_code |= errors::RANGE_ERROR_I;
+            return Paths::new(); // empty path
+        }
+    }
+
+    let mut result = Vec::with_capacity(paths.len());
+    for path in paths {
+        result.push(scale_path(path, scale_x, scale_y, error_code));
+    }
+    result
+}
+
+/// Scale multiple paths with uniform scale
+/// Direct port from clipper.core.h line 584
+#[inline]
+pub fn scale_paths_uniform<T1, T2>(paths: &Paths<T2>, scale: f64, error_code: &mut i32) -> Paths<T1>
+where
+    T1: Num + Copy + PartialOrd + FromF64,
+    T2: Copy + ToF64,
+{
+    scale_paths(paths, scale, scale, error_code)
+}
+
+/// Transform a path between types (no scaling, just type conversion)
+/// Direct port from clipper.core.h line 591
+#[inline]
+pub fn transform_path<T1, T2>(path: &Path<T2>) -> Path<T1>
+where
+    T1: Num + Copy + FromF64,
+    T2: Copy + ToF64,
+{
+    let mut result = Vec::with_capacity(path.len());
+    for pt in path {
+        result.push(Point {
+            x: T1::from_f64(pt.x.to_f64()),
+            y: T1::from_f64(pt.y.to_f64()),
+        });
+    }
+    result
+}
+
+/// Transform multiple paths between types (no scaling, just type conversion)
+/// Direct port from clipper.core.h line 601
+#[inline]
+pub fn transform_paths<T1, T2>(paths: &Paths<T2>) -> Paths<T1>
+where
+    T1: Num + Copy + FromF64,
+    T2: Copy + ToF64,
+{
+    let mut result = Vec::with_capacity(paths.len());
+    for path in paths {
+        result.push(transform_path(path));
+    }
+    result
+}
+
+/// Check if two points are near each other within a distance threshold
+/// Direct port from clipper.core.h line 616
+#[inline]
+pub fn near_equal<T>(p1: &Point<T>, p2: &Point<T>, max_dist_sqrd: f64) -> bool
+where
+    T: Copy + ToF64,
+{
+    sqr(p1.x.to_f64() - p2.x.to_f64()) + sqr(p1.y.to_f64() - p2.y.to_f64()) < max_dist_sqrd
+}
+
+/// Strip near-equal consecutive points from a path
+/// Direct port from clipper.core.h line 623
+#[inline]
+pub fn strip_near_equal<T>(path: &Path<T>, max_dist_sqrd: f64, is_closed_path: bool) -> Path<T>
+where
+    T: Copy + ToF64 + PartialEq + Num,
+{
+    if path.is_empty() {
+        return Path::new();
+    }
+
+    let mut result = Vec::with_capacity(path.len());
+    let first_pt = path[0];
+    let mut last_pt = first_pt;
+    result.push(first_pt);
+
+    for pt in path.iter().skip(1) {
+        if !near_equal(pt, &last_pt, max_dist_sqrd) {
+            last_pt = *pt;
+            result.push(last_pt);
+        }
+    }
+
+    if !is_closed_path {
+        return result;
+    }
+
+    while result.len() > 1 && near_equal(result.last().unwrap(), &first_pt, max_dist_sqrd) {
+        result.pop();
+    }
+
+    result
+}
+
+/// Strip near-equal consecutive points from multiple paths
+/// Direct port from clipper.core.h line 647
+#[inline]
+pub fn strip_near_equal_paths<T>(
+    paths: &Paths<T>,
+    max_dist_sqrd: f64,
+    is_closed_path: bool,
+) -> Paths<T>
+where
+    T: Copy + ToF64 + PartialEq + Num,
+{
+    let mut result = Vec::with_capacity(paths.len());
+    for path in paths {
+        result.push(strip_near_equal(path, max_dist_sqrd, is_closed_path));
+    }
+    result
+}
+
+/// Translate a point by dx, dy
+/// Direct port from clipper.core.h line 975
+#[inline]
+pub fn translate_point<T>(pt: &Point<T>, dx: f64, dy: f64) -> Point<T>
+where
+    T: Copy + ToF64 + FromF64 + Num,
+{
+    Point {
+        x: T::from_f64(pt.x.to_f64() + dx),
+        y: T::from_f64(pt.y.to_f64() + dy),
+    }
+}
+
+/// Reflect a point about a pivot point
+/// Direct port from clipper.core.h line 986
+#[inline]
+pub fn reflect_point<T>(pt: &Point<T>, pivot: &Point<T>) -> Point<T>
+where
+    T: Num + Copy,
+{
+    Point {
+        x: pivot.x + (pivot.x - pt.x),
+        y: pivot.y + (pivot.y - pt.y),
+    }
+}
+
+/// Get the sign of a value: -1, 0, or 1
+/// Direct port from clipper.core.h line 996
+#[inline]
+pub fn get_sign<T>(val: &T) -> i32
+where
+    T: Num + PartialOrd,
+{
+    if val.is_zero() {
+        0
+    } else if *val > T::zero() {
+        1
+    } else {
+        -1
+    }
+}
+
+/// Get the sign of the cross product of vectors (pt1->pt2) and (pt2->pt3)
+/// Uses high-precision 128-bit arithmetic for exact results with i64 coordinates
+/// Direct port from clipper.core.h line 753
+#[inline]
+pub fn cross_product_sign(pt1: Point64, pt2: Point64, pt3: Point64) -> i32 {
+    // Use i128 for exact arithmetic (available on all Rust platforms)
+    let a = pt2.x as i128 - pt1.x as i128;
+    let b = pt3.y as i128 - pt2.y as i128;
+    let c = pt2.y as i128 - pt1.y as i128;
+    let d = pt3.x as i128 - pt2.x as i128;
+
+    let ab = a * b;
+    let cd = c * d;
+
+    if ab > cd {
+        1
+    } else if ab < cd {
+        -1
+    } else {
+        0
+    }
+}
+
+/// Check if two line segments intersect
+/// Direct port from clipper.core.h line 1003
+#[inline]
+pub fn segments_intersect(
+    seg1a: Point64,
+    seg1b: Point64,
+    seg2a: Point64,
+    seg2b: Point64,
+    inclusive: bool,
+) -> bool {
+    if inclusive {
+        let res1 = cross_product_three_points(seg1a, seg2a, seg2b);
+        let res2 = cross_product_three_points(seg1b, seg2a, seg2b);
+        if res1 * res2 > 0.0 {
+            return false;
+        }
+        let res3 = cross_product_three_points(seg2a, seg1a, seg1b);
+        let res4 = cross_product_three_points(seg2b, seg1a, seg1b);
+        if res3 * res4 > 0.0 {
+            return false;
+        }
+        // ensures not collinear
+        res1 != 0.0 || res2 != 0.0 || res3 != 0.0 || res4 != 0.0
+    } else {
+        (get_sign(&cross_product_three_points(seg1a, seg2a, seg2b))
+            * get_sign(&cross_product_three_points(seg1b, seg2a, seg2b))
+            < 0)
+            && (get_sign(&cross_product_three_points(seg2a, seg1a, seg1b))
+                * get_sign(&cross_product_three_points(seg2b, seg1a, seg1b))
+                < 0)
+    }
+}
+
+/// Get the closest point on a segment to an off-segment point
+/// Direct port from clipper.core.h line 1024
+#[inline]
+pub fn get_closest_point_on_segment<T>(off_pt: Point<T>, seg1: Point<T>, seg2: Point<T>) -> Point<T>
+where
+    T: Copy + ToF64 + FromF64 + Num + PartialEq,
+{
+    if seg1.x == seg2.x && seg1.y == seg2.y {
+        return seg1;
+    }
+    let dx = seg2.x.to_f64() - seg1.x.to_f64();
+    let dy = seg2.y.to_f64() - seg1.y.to_f64();
+    let mut q =
+        (off_pt.x.to_f64() - seg1.x.to_f64()) * dx + (off_pt.y.to_f64() - seg1.y.to_f64()) * dy;
+    q /= sqr(dx) + sqr(dy);
+    q = q.clamp(0.0, 1.0);
+    Point {
+        x: T::from_f64(seg1.x.to_f64() + q * dx),
+        y: T::from_f64(seg1.y.to_f64() + q * dy),
+    }
+}
+
+/// Perpendicular distance squared from a point to a line defined by two points
+/// Direct port from clipper.core.h line 840
+/// Uses the formula: (Ax3 + By3 + C)^2 / (A^2 + B^2)
+/// where A, B, C define the line equation
+#[inline]
+pub fn perpendic_dist_from_line_sqrd<T>(pt: Point<T>, line1: Point<T>, line2: Point<T>) -> f64
+where
+    T: Copy + ToF64,
+{
+    let a = pt.x.to_f64() - line1.x.to_f64();
+    let b = pt.y.to_f64() - line1.y.to_f64();
+    let c = line2.x.to_f64() - line1.x.to_f64();
+    let d = line2.y.to_f64() - line1.y.to_f64();
+    if c == 0.0 && d == 0.0 {
+        return 0.0;
+    }
+    sqr(a * d - c * b) / (c * c + d * d)
 }
 
 // Include tests from separate file

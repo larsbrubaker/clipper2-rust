@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const MAX_FILE_LENGTH: usize = 1000;
+const MAX_FILE_LENGTH: usize = 4000;
 
 /// Walk directory recursively to find all files with specified extensions
 fn find_files_with_extensions(dir: &Path, extensions: &[&str]) -> Vec<PathBuf> {

@@ -1,6 +1,258 @@
 use super::*;
 
 #[test]
+fn test_get_segment_intersect_pt_basic() {
+    let p1 = Point64::new(0, 0);
+    let p2 = Point64::new(10, 10);
+    let p3 = Point64::new(0, 10);
+    let p4 = Point64::new(10, 0);
+    let mut ip = Point64::new(0, 0);
+
+    // Crossing lines should intersect at (5, 5)
+    let result = get_segment_intersect_pt(p1, p2, p3, p4, &mut ip);
+    assert!(result);
+    assert_eq!(ip.x, 5);
+    assert_eq!(ip.y, 5);
+}
+
+#[test]
+fn test_get_segment_intersect_pt_parallel() {
+    let p1 = Point64::new(0, 0);
+    let p2 = Point64::new(10, 0);
+    let p3 = Point64::new(0, 5);
+    let p4 = Point64::new(10, 5);
+    let mut ip = Point64::new(0, 0);
+
+    // Parallel lines should not intersect
+    let result = get_segment_intersect_pt(p1, p2, p3, p4, &mut ip);
+    assert!(!result);
+}
+
+#[test]
+fn test_get_segment_intersect_pt_endpoint() {
+    let p1 = Point64::new(0, 0);
+    let p2 = Point64::new(10, 0);
+    let p3 = Point64::new(0, 0);
+    let p4 = Point64::new(0, 10);
+    let mut ip = Point64::new(0, 0);
+
+    // Lines that meet at endpoint should return endpoint
+    let result = get_segment_intersect_pt(p1, p2, p3, p4, &mut ip);
+    assert!(result);
+    assert_eq!(ip.x, 0);
+    assert_eq!(ip.y, 0);
+}
+
+#[test]
+fn test_is_collinear_true() {
+    let p1 = Point64::new(0, 0);
+    let p2 = Point64::new(5, 5);
+    let p3 = Point64::new(10, 10);
+
+    // Points on a diagonal line should be collinear
+    assert!(is_collinear(p1, p2, p3));
+
+    // Test horizontal line
+    let p4 = Point64::new(0, 5);
+    let p5 = Point64::new(5, 5);
+    let p6 = Point64::new(10, 5);
+    assert!(is_collinear(p4, p5, p6));
+
+    // Test vertical line
+    let p7 = Point64::new(5, 0);
+    let p8 = Point64::new(5, 5);
+    let p9 = Point64::new(5, 10);
+    assert!(is_collinear(p7, p8, p9));
+}
+
+#[test]
+fn test_is_collinear_false() {
+    let p1 = Point64::new(0, 0);
+    let p2 = Point64::new(5, 5);
+    let p3 = Point64::new(10, 5);
+
+    // Points forming a right angle should not be collinear
+    assert!(!is_collinear(p1, p2, p3));
+}
+
+#[test]
+fn test_point_in_polygon_inside() {
+    // Square polygon
+    let square = vec![
+        Point64::new(0, 0),
+        Point64::new(10, 0),
+        Point64::new(10, 10),
+        Point64::new(0, 10),
+    ];
+
+    // Point inside square
+    let inside_pt = Point64::new(5, 5);
+    assert_eq!(
+        point_in_polygon(inside_pt, &square),
+        PointInPolygonResult::IsInside
+    );
+}
+
+#[test]
+fn test_point_in_polygon_outside() {
+    // Square polygon
+    let square = vec![
+        Point64::new(0, 0),
+        Point64::new(10, 0),
+        Point64::new(10, 10),
+        Point64::new(0, 10),
+    ];
+
+    // Point outside square
+    let outside_pt = Point64::new(15, 15);
+    assert_eq!(
+        point_in_polygon(outside_pt, &square),
+        PointInPolygonResult::IsOutside
+    );
+
+    // Point to the left
+    let left_pt = Point64::new(-5, 5);
+    assert_eq!(
+        point_in_polygon(left_pt, &square),
+        PointInPolygonResult::IsOutside
+    );
+}
+
+#[test]
+fn test_point_in_polygon_on_edge() {
+    // Square polygon
+    let square = vec![
+        Point64::new(0, 0),
+        Point64::new(10, 0),
+        Point64::new(10, 10),
+        Point64::new(0, 10),
+    ];
+
+    // Point on edge
+    let edge_pt = Point64::new(5, 0);
+    assert_eq!(
+        point_in_polygon(edge_pt, &square),
+        PointInPolygonResult::IsOn
+    );
+
+    // Point at vertex
+    let vertex_pt = Point64::new(0, 0);
+    assert_eq!(
+        point_in_polygon(vertex_pt, &square),
+        PointInPolygonResult::IsOn
+    );
+}
+
+#[test]
+fn test_point_in_polygon_triangle() {
+    // Triangle polygon
+    let triangle = vec![Point64::new(0, 0), Point64::new(10, 0), Point64::new(5, 10)];
+
+    // Point inside triangle
+    let inside_pt = Point64::new(5, 3);
+    assert_eq!(
+        point_in_polygon(inside_pt, &triangle),
+        PointInPolygonResult::IsInside
+    );
+
+    // Point outside triangle
+    let outside_pt = Point64::new(1, 8);
+    assert_eq!(
+        point_in_polygon(outside_pt, &triangle),
+        PointInPolygonResult::IsOutside
+    );
+}
+
+#[test]
+fn test_point_in_polygon_degenerate() {
+    // Line (only 2 points) - should always be outside
+    let line = vec![Point64::new(0, 0), Point64::new(10, 0)];
+
+    let test_pt = Point64::new(5, 0);
+    assert_eq!(
+        point_in_polygon(test_pt, &line),
+        PointInPolygonResult::IsOutside
+    );
+}
+
+#[test]
+fn test_get_location_basic() {
+    let rect = Rect64::new(10, 10, 50, 50);
+    let mut loc = Location::Inside;
+
+    // Point inside rectangle
+    let inside_pt = Point64::new(25, 25);
+    let result = get_location(&rect, &inside_pt, &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Inside);
+
+    // Point to the left
+    let left_pt = Point64::new(5, 25);
+    let result = get_location(&rect, &left_pt, &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Left);
+
+    // Point to the right
+    let right_pt = Point64::new(55, 25);
+    let result = get_location(&rect, &right_pt, &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Right);
+
+    // Point above
+    let top_pt = Point64::new(25, 5);
+    let result = get_location(&rect, &top_pt, &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Top);
+
+    // Point below
+    let bottom_pt = Point64::new(25, 55);
+    let result = get_location(&rect, &bottom_pt, &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Bottom);
+}
+
+#[test]
+fn test_get_location_on_edge() {
+    let rect = Rect64::new(10, 10, 50, 50);
+    let mut loc = Location::Inside;
+
+    // Point on left edge
+    let left_edge_pt = Point64::new(10, 25);
+    let result = get_location(&rect, &left_edge_pt, &mut loc);
+    assert!(!result); // Returns false when on edge
+    assert_eq!(loc, Location::Left);
+
+    // Point on right edge
+    let right_edge_pt = Point64::new(50, 25);
+    let result = get_location(&rect, &right_edge_pt, &mut loc);
+    assert!(!result);
+    assert_eq!(loc, Location::Right);
+
+    // Point on top edge
+    let top_edge_pt = Point64::new(25, 10);
+    let result = get_location(&rect, &top_edge_pt, &mut loc);
+    assert!(!result);
+    assert_eq!(loc, Location::Top);
+
+    // Point on bottom edge
+    let bottom_edge_pt = Point64::new(25, 50);
+    let result = get_location(&rect, &bottom_edge_pt, &mut loc);
+    assert!(!result);
+    assert_eq!(loc, Location::Bottom);
+}
+
+#[test]
+fn test_is_horizontal() {
+    let p1 = Point64::new(0, 5);
+    let p2 = Point64::new(10, 5);
+    assert!(is_horizontal(&p1, &p2));
+
+    let p3 = Point64::new(0, 5);
+    let p4 = Point64::new(10, 10);
+    assert!(!is_horizontal(&p3, &p4));
+}
+
+#[test]
 fn test_fill_rule_default() {
     assert_eq!(FillRule::default(), FillRule::EvenOdd);
 }
@@ -922,4 +1174,996 @@ fn test_is_positive() {
     // Test empty path
     let empty: Path64 = vec![];
     assert!(is_positive(&empty)); // Zero area returns true
+}
+
+#[test]
+fn test_location_variants() {
+    let locations = [
+        Location::Left,
+        Location::Top,
+        Location::Right,
+        Location::Bottom,
+        Location::Inside,
+    ];
+    assert_eq!(locations.len(), 5);
+
+    // Test each variant is unique
+    for i in 0..locations.len() {
+        for j in (i + 1)..locations.len() {
+            assert_ne!(locations[i], locations[j]);
+        }
+    }
+}
+
+#[test]
+fn test_location_copy_clone() {
+    let loc = Location::Inside;
+    let copied = loc;
+    let cloned = loc;
+
+    assert_eq!(loc, copied);
+    assert_eq!(loc, cloned);
+    assert_eq!(copied, cloned);
+}
+
+#[test]
+fn test_location_debug() {
+    assert_eq!(format!("{:?}", Location::Left), "Left");
+    assert_eq!(format!("{:?}", Location::Top), "Top");
+    assert_eq!(format!("{:?}", Location::Right), "Right");
+    assert_eq!(format!("{:?}", Location::Bottom), "Bottom");
+    assert_eq!(format!("{:?}", Location::Inside), "Inside");
+}
+
+#[test]
+fn test_location_hash() {
+    use std::collections::HashMap;
+
+    let mut map = HashMap::new();
+    map.insert(Location::Left, "left");
+    map.insert(Location::Top, "top");
+    map.insert(Location::Right, "right");
+    map.insert(Location::Bottom, "bottom");
+    map.insert(Location::Inside, "inside");
+
+    assert_eq!(map[&Location::Left], "left");
+    assert_eq!(map[&Location::Top], "top");
+    assert_eq!(map[&Location::Right], "right");
+    assert_eq!(map[&Location::Bottom], "bottom");
+    assert_eq!(map[&Location::Inside], "inside");
+    assert_eq!(map.len(), 5);
+}
+
+#[test]
+fn test_location_ordering_properties() {
+    let locations = [
+        Location::Left,
+        Location::Top,
+        Location::Right,
+        Location::Bottom,
+        Location::Inside,
+    ];
+
+    // Test that all locations can be compared for equality
+    for loc1 in &locations {
+        for loc2 in &locations {
+            let eq = loc1 == loc2;
+            let ne = loc1 != loc2;
+            assert_eq!(eq, !ne); // == and != should be opposites
+            if std::ptr::eq(loc1, loc2) {
+                assert!(eq);
+            }
+        }
+    }
+}
+
+#[test]
+fn test_get_location_inside() {
+    let rect = Rect64::new(10, 10, 100, 100);
+    let pt = Point64::new(50, 50);
+    let mut loc = Location::Left;
+
+    let result = get_location(&rect, &pt, &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Inside);
+}
+
+#[test]
+fn test_get_location_left_edge() {
+    let rect = Rect64::new(10, 10, 100, 100);
+    let pt = Point64::new(10, 50);
+    let mut loc = Location::Inside;
+
+    let result = get_location(&rect, &pt, &mut loc);
+    assert!(!result); // On edge should return false
+    assert_eq!(loc, Location::Left);
+}
+
+#[test]
+fn test_get_location_right_edge() {
+    let rect = Rect64::new(10, 10, 100, 100);
+    let pt = Point64::new(100, 50);
+    let mut loc = Location::Inside;
+
+    let result = get_location(&rect, &pt, &mut loc);
+    assert!(!result); // On edge should return false
+    assert_eq!(loc, Location::Right);
+}
+
+#[test]
+fn test_get_location_top_edge() {
+    let rect = Rect64::new(10, 10, 100, 100);
+    let pt = Point64::new(50, 10);
+    let mut loc = Location::Inside;
+
+    let result = get_location(&rect, &pt, &mut loc);
+    assert!(!result); // On edge should return false
+    assert_eq!(loc, Location::Top);
+}
+
+#[test]
+fn test_get_location_bottom_edge() {
+    let rect = Rect64::new(10, 10, 100, 100);
+    let pt = Point64::new(50, 100);
+    let mut loc = Location::Inside;
+
+    let result = get_location(&rect, &pt, &mut loc);
+    assert!(!result); // On edge should return false
+    assert_eq!(loc, Location::Bottom);
+}
+
+#[test]
+fn test_get_location_corners_on_edge() {
+    let rect = Rect64::new(10, 10, 100, 100);
+    let mut loc = Location::Inside;
+
+    // Top-left corner (on left edge)
+    let result = get_location(&rect, &Point64::new(10, 10), &mut loc);
+    assert!(!result);
+    assert_eq!(loc, Location::Left);
+
+    // Top-right corner (on right edge - C++ implementation prioritizes x over y)
+    let result = get_location(&rect, &Point64::new(100, 10), &mut loc);
+    assert!(!result);
+    assert_eq!(loc, Location::Right);
+
+    // Bottom-left corner (on left edge)
+    let result = get_location(&rect, &Point64::new(10, 100), &mut loc);
+    assert!(!result);
+    assert_eq!(loc, Location::Left);
+
+    // Bottom-right corner (on right edge - C++ implementation prioritizes x over y)
+    let result = get_location(&rect, &Point64::new(100, 100), &mut loc);
+    assert!(!result);
+    assert_eq!(loc, Location::Right);
+}
+
+#[test]
+fn test_get_location_outside_regions() {
+    let rect = Rect64::new(10, 10, 100, 100);
+    let mut loc = Location::Inside;
+
+    // Left region
+    let result = get_location(&rect, &Point64::new(5, 50), &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Left);
+
+    // Right region
+    let result = get_location(&rect, &Point64::new(150, 50), &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Right);
+
+    // Top region
+    let result = get_location(&rect, &Point64::new(50, 5), &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Top);
+
+    // Bottom region
+    let result = get_location(&rect, &Point64::new(50, 150), &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Bottom);
+}
+
+#[test]
+fn test_get_location_diagonal_outside() {
+    let rect = Rect64::new(10, 10, 100, 100);
+    let mut loc = Location::Inside;
+
+    // Top-left diagonal (should be Left since x < left)
+    let result = get_location(&rect, &Point64::new(5, 5), &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Left);
+
+    // Top-right diagonal (should be Right since x > right)
+    let result = get_location(&rect, &Point64::new(150, 5), &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Right);
+
+    // Bottom-left diagonal (should be Left since x < left)
+    let result = get_location(&rect, &Point64::new(5, 150), &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Left);
+
+    // Bottom-right diagonal (should be Right since x > right)
+    let result = get_location(&rect, &Point64::new(150, 150), &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Right);
+}
+
+#[test]
+fn test_get_location_edge_cases() {
+    let rect = Rect64::new(0, 0, 10, 10);
+    let mut loc = Location::Inside;
+
+    // Point at origin (on left edge)
+    let result = get_location(&rect, &Point64::new(0, 0), &mut loc);
+    assert!(!result);
+    assert_eq!(loc, Location::Left);
+
+    // Single point rectangle
+    let single_rect = Rect64::new(5, 5, 5, 5);
+    let result = get_location(&single_rect, &Point64::new(5, 5), &mut loc);
+    assert!(!result);
+    assert_eq!(loc, Location::Left);
+
+    // Point just inside
+    let result = get_location(&rect, &Point64::new(1, 1), &mut loc);
+    assert!(result);
+    assert_eq!(loc, Location::Inside);
+}
+
+#[test]
+fn test_get_location_comprehensive_coverage() {
+    let rect = Rect64::new(10, 10, 100, 100);
+    let mut loc = Location::Inside;
+
+    // Test a grid of points to ensure comprehensive coverage
+    let test_points = [
+        // Inside
+        (Point64::new(50, 50), true, Location::Inside),
+        (Point64::new(11, 11), true, Location::Inside),
+        (Point64::new(99, 99), true, Location::Inside),
+        // On edges (should return false)
+        (Point64::new(10, 50), false, Location::Left),
+        (Point64::new(100, 50), false, Location::Right),
+        (Point64::new(50, 10), false, Location::Top),
+        (Point64::new(50, 100), false, Location::Bottom),
+        // Outside
+        (Point64::new(5, 50), true, Location::Left),
+        (Point64::new(150, 50), true, Location::Right),
+        (Point64::new(50, 5), true, Location::Top),
+        (Point64::new(50, 150), true, Location::Bottom),
+    ];
+
+    for (point, expected_result, expected_location) in test_points.iter() {
+        let result = get_location(&rect, point, &mut loc);
+        assert_eq!(
+            result, *expected_result,
+            "Point {:?} should return {}",
+            point, expected_result
+        );
+        assert_eq!(
+            loc, *expected_location,
+            "Point {:?} should be at location {:?}",
+            point, expected_location
+        );
+    }
+}
+
+#[test]
+fn test_is_horizontal_true() {
+    let pt1 = Point64::new(10, 50);
+    let pt2 = Point64::new(100, 50);
+    assert!(is_horizontal(&pt1, &pt2));
+
+    // Test with same point
+    assert!(is_horizontal(&pt1, &pt1));
+
+    // Test with zero y-coordinates
+    let pt3 = Point64::new(-10, 0);
+    let pt4 = Point64::new(20, 0);
+    assert!(is_horizontal(&pt3, &pt4));
+
+    // Test with negative y-coordinates
+    let pt5 = Point64::new(0, -25);
+    let pt6 = Point64::new(100, -25);
+    assert!(is_horizontal(&pt5, &pt6));
+}
+
+#[test]
+fn test_is_horizontal_false() {
+    let pt1 = Point64::new(10, 50);
+    let pt2 = Point64::new(10, 60);
+    assert!(!is_horizontal(&pt1, &pt2));
+
+    // Test diagonal
+    let pt3 = Point64::new(0, 0);
+    let pt4 = Point64::new(10, 10);
+    assert!(!is_horizontal(&pt3, &pt4));
+
+    // Test with different y values
+    let pt5 = Point64::new(100, 25);
+    let pt6 = Point64::new(100, 26);
+    assert!(!is_horizontal(&pt5, &pt6));
+}
+
+#[test]
+fn test_is_horizontal_edge_cases() {
+    // Test with extreme values
+    let pt1 = Point64::new(i64::MIN, 0);
+    let pt2 = Point64::new(i64::MAX, 0);
+    assert!(is_horizontal(&pt1, &pt2));
+
+    let pt3 = Point64::new(0, i64::MIN);
+    let pt4 = Point64::new(0, i64::MAX);
+    assert!(!is_horizontal(&pt3, &pt4));
+
+    // Test with same x, different y
+    let pt5 = Point64::new(42, -100);
+    let pt6 = Point64::new(42, 100);
+    assert!(!is_horizontal(&pt5, &pt6));
+
+    // Test with different x, same y
+    let pt7 = Point64::new(-100, 42);
+    let pt8 = Point64::new(100, 42);
+    assert!(is_horizontal(&pt7, &pt8));
+}
+
+#[test]
+fn test_is_horizontal_symmetry() {
+    let pt1 = Point64::new(10, 20);
+    let pt2 = Point64::new(30, 20);
+    let pt3 = Point64::new(10, 25);
+
+    // Function should be symmetric
+    assert_eq!(is_horizontal(&pt1, &pt2), is_horizontal(&pt2, &pt1));
+    assert_eq!(is_horizontal(&pt1, &pt3), is_horizontal(&pt3, &pt1));
+
+    // Test multiple symmetric cases
+    let test_pairs = [
+        (Point64::new(0, 10), Point64::new(100, 10)),
+        (Point64::new(-50, -20), Point64::new(75, -20)),
+        (Point64::new(5, 5), Point64::new(5, 15)),
+        (Point64::new(-10, 0), Point64::new(-5, 0)),
+    ];
+
+    for (p1, p2) in test_pairs.iter() {
+        assert_eq!(
+            is_horizontal(p1, p2),
+            is_horizontal(p2, p1),
+            "Symmetry failed for points {:?} and {:?}",
+            p1,
+            p2
+        );
+    }
+}
+
+#[test]
+fn test_is_horizontal_comprehensive() {
+    // Create a comprehensive test with various combinations
+    let horizontal_pairs = [
+        (Point64::new(0, 0), Point64::new(1, 0)),
+        (Point64::new(-10, 5), Point64::new(20, 5)),
+        (Point64::new(100, -50), Point64::new(-100, -50)),
+        (Point64::new(42, 42), Point64::new(42, 42)), // same point
+    ];
+
+    let non_horizontal_pairs = [
+        (Point64::new(0, 0), Point64::new(0, 1)),
+        (Point64::new(10, 10), Point64::new(15, 15)),
+        (Point64::new(-5, 20), Point64::new(-5, 19)),
+        (Point64::new(100, 0), Point64::new(100, -1)),
+    ];
+
+    for (p1, p2) in horizontal_pairs.iter() {
+        assert!(
+            is_horizontal(p1, p2),
+            "Expected horizontal line for points {:?} and {:?}",
+            p1,
+            p2
+        );
+    }
+
+    for (p1, p2) in non_horizontal_pairs.iter() {
+        assert!(
+            !is_horizontal(p1, p2),
+            "Expected non-horizontal line for points {:?} and {:?}",
+            p1,
+            p2
+        );
+    }
+}
+
+// ============================================================================
+// Tests for Phase 1: Missing core.rs functions
+// ============================================================================
+
+// --- ScaleRect tests ---
+
+#[test]
+fn test_scale_rect_i64_to_f64() {
+    let rect = Rect64::new(10, 20, 30, 40);
+    let scaled: RectD = scale_rect(&rect, 2.0);
+    assert_eq!(scaled.left, 20.0);
+    assert_eq!(scaled.top, 40.0);
+    assert_eq!(scaled.right, 60.0);
+    assert_eq!(scaled.bottom, 80.0);
+}
+
+#[test]
+fn test_scale_rect_f64_to_i64() {
+    let rect = RectD::new(10.5, 20.5, 30.5, 40.5);
+    let scaled: Rect64 = scale_rect(&rect, 2.0);
+    // Should round: 10.5*2=21.0, 20.5*2=41.0, etc.
+    assert_eq!(scaled.left, 21);
+    assert_eq!(scaled.top, 41);
+    assert_eq!(scaled.right, 61);
+    assert_eq!(scaled.bottom, 81);
+}
+
+#[test]
+fn test_scale_rect_fractional() {
+    let rect = RectD::new(1.0, 2.0, 3.0, 4.0);
+    let scaled: RectD = scale_rect(&rect, 0.5);
+    assert_eq!(scaled.left, 0.5);
+    assert_eq!(scaled.top, 1.0);
+    assert_eq!(scaled.right, 1.5);
+    assert_eq!(scaled.bottom, 2.0);
+}
+
+#[test]
+fn test_scale_rect_identity() {
+    let rect = Rect64::new(10, 20, 30, 40);
+    let scaled: Rect64 = scale_rect(&rect, 1.0);
+    assert_eq!(scaled, rect);
+}
+
+// --- ScalePath tests ---
+
+#[test]
+fn test_scale_path_d_to_i64() {
+    let path: PathD = vec![
+        PointD::new(1.5, 2.5),
+        PointD::new(3.5, 4.5),
+        PointD::new(5.5, 6.5),
+    ];
+    let mut error_code = 0;
+    let result: Path64 = scale_path(&path, 2.0, 2.0, &mut error_code);
+    assert_eq!(error_code, 0);
+    assert_eq!(result.len(), 3);
+    assert_eq!(result[0], Point64::new(3, 5)); // 1.5*2=3.0, 2.5*2=5.0
+    assert_eq!(result[1], Point64::new(7, 9)); // 3.5*2=7.0, 4.5*2=9.0
+    assert_eq!(result[2], Point64::new(11, 13)); // 5.5*2=11.0, 6.5*2=13.0
+}
+
+#[test]
+fn test_scale_path_i64_to_d() {
+    let path: Path64 = vec![Point64::new(10, 20), Point64::new(30, 40)];
+    let mut error_code = 0;
+    let result: PathD = scale_path(&path, 0.1, 0.1, &mut error_code);
+    assert_eq!(error_code, 0);
+    assert_eq!(result.len(), 2);
+    assert!((result[0].x - 1.0).abs() < 1e-10);
+    assert!((result[0].y - 2.0).abs() < 1e-10);
+    assert!((result[1].x - 3.0).abs() < 1e-10);
+    assert!((result[1].y - 4.0).abs() < 1e-10);
+}
+
+#[test]
+fn test_scale_path_different_xy_scales() {
+    let path: PathD = vec![PointD::new(10.0, 20.0)];
+    let mut error_code = 0;
+    let result: Path64 = scale_path(&path, 2.0, 3.0, &mut error_code);
+    assert_eq!(error_code, 0);
+    assert_eq!(result[0], Point64::new(20, 60));
+}
+
+#[test]
+fn test_scale_path_zero_scale_error() {
+    let path: PathD = vec![PointD::new(10.0, 20.0)];
+    let mut error_code = 0;
+    let result: Path64 = scale_path(&path, 0.0, 2.0, &mut error_code);
+    // Should set error code but still produce result (non-fatal)
+    assert_ne!(error_code & errors::SCALE_ERROR_I, 0);
+    // With zero scale treated as 1.0, x should be 10, y should be 40
+    assert_eq!(result[0], Point64::new(10, 40));
+}
+
+#[test]
+fn test_scale_path_empty() {
+    let path: PathD = vec![];
+    let mut error_code = 0;
+    let result: Path64 = scale_path(&path, 2.0, 2.0, &mut error_code);
+    assert_eq!(error_code, 0);
+    assert!(result.is_empty());
+}
+
+#[test]
+fn test_scale_path_uniform() {
+    let path: Path64 = vec![Point64::new(10, 20), Point64::new(30, 40)];
+    let mut error_code = 0;
+    let result: PathD = scale_path_uniform(&path, 0.5, &mut error_code);
+    assert_eq!(error_code, 0);
+    assert!((result[0].x - 5.0).abs() < 1e-10);
+    assert!((result[0].y - 10.0).abs() < 1e-10);
+}
+
+// --- ScalePaths tests ---
+
+#[test]
+fn test_scale_paths_basic() {
+    let paths: PathsD = vec![
+        vec![PointD::new(1.0, 2.0), PointD::new(3.0, 4.0)],
+        vec![PointD::new(5.0, 6.0)],
+    ];
+    let mut error_code = 0;
+    let result: Paths64 = scale_paths(&paths, 10.0, 10.0, &mut error_code);
+    assert_eq!(error_code, 0);
+    assert_eq!(result.len(), 2);
+    assert_eq!(result[0][0], Point64::new(10, 20));
+    assert_eq!(result[0][1], Point64::new(30, 40));
+    assert_eq!(result[1][0], Point64::new(50, 60));
+}
+
+#[test]
+fn test_scale_paths_range_error() {
+    // Create paths that when scaled would exceed MAX_COORD
+    let large_val = (constants::MAX_COORD / 2) as f64;
+    let paths: PathsD = vec![vec![PointD::new(large_val, large_val)]];
+    let mut error_code = 0;
+    let result: Paths64 = scale_paths(&paths, 10.0, 10.0, &mut error_code);
+    assert_ne!(error_code & errors::RANGE_ERROR_I, 0);
+    assert!(result.is_empty());
+}
+
+#[test]
+fn test_scale_paths_uniform() {
+    let paths: Paths64 = vec![vec![Point64::new(100, 200)]];
+    let mut error_code = 0;
+    let result: PathsD = scale_paths_uniform(&paths, 0.01, &mut error_code);
+    assert_eq!(error_code, 0);
+    assert!((result[0][0].x - 1.0).abs() < 1e-10);
+    assert!((result[0][0].y - 2.0).abs() < 1e-10);
+}
+
+// --- TransformPath tests ---
+
+#[test]
+fn test_transform_path_d_to_i64() {
+    let path: PathD = vec![PointD::new(1.4, 2.6), PointD::new(3.5, 4.5)];
+    let result: Path64 = transform_path(&path);
+    assert_eq!(result[0], Point64::new(1, 3)); // rounds
+    assert_eq!(result[1], Point64::new(4, 5)); // rounds 3.5->4, 4.5->5 (banker's rounding: 4)
+}
+
+#[test]
+fn test_transform_path_i64_to_d() {
+    let path: Path64 = vec![Point64::new(10, 20)];
+    let result: PathD = transform_path(&path);
+    assert_eq!(result[0].x, 10.0);
+    assert_eq!(result[0].y, 20.0);
+}
+
+#[test]
+fn test_transform_paths_basic() {
+    let paths: Paths64 = vec![
+        vec![Point64::new(1, 2), Point64::new(3, 4)],
+        vec![Point64::new(5, 6)],
+    ];
+    let result: PathsD = transform_paths(&paths);
+    assert_eq!(result.len(), 2);
+    assert_eq!(result[0][0].x, 1.0);
+    assert_eq!(result[0][1].y, 4.0);
+    assert_eq!(result[1][0].x, 5.0);
+}
+
+#[test]
+fn test_transform_path_empty() {
+    let path: PathD = vec![];
+    let result: Path64 = transform_path(&path);
+    assert!(result.is_empty());
+}
+
+#[test]
+fn test_transform_paths_empty() {
+    let paths: PathsD = vec![];
+    let result: Paths64 = transform_paths(&paths);
+    assert!(result.is_empty());
+}
+
+// --- NearEqual tests ---
+
+#[test]
+fn test_near_equal_same_point() {
+    let p = Point64::new(10, 20);
+    assert!(near_equal(&p, &p, 1.0));
+}
+
+#[test]
+fn test_near_equal_close_points() {
+    let p1 = PointD::new(1.0, 1.0);
+    let p2 = PointD::new(1.0, 1.5);
+    assert!(near_equal(&p1, &p2, 1.0)); // dist_sqr = 0.25 < 1.0
+    assert!(!near_equal(&p1, &p2, 0.1)); // dist_sqr = 0.25 >= 0.1
+}
+
+#[test]
+fn test_near_equal_far_points() {
+    let p1 = Point64::new(0, 0);
+    let p2 = Point64::new(100, 100);
+    assert!(!near_equal(&p1, &p2, 100.0));
+}
+
+#[test]
+fn test_near_equal_threshold_boundary() {
+    let p1 = PointD::new(0.0, 0.0);
+    let p2 = PointD::new(1.0, 0.0);
+    // dist_sqr = 1.0, threshold = 1.0 -> false (strictly less than)
+    assert!(!near_equal(&p1, &p2, 1.0));
+    // dist_sqr = 1.0, threshold = 1.01 -> true
+    assert!(near_equal(&p1, &p2, 1.01));
+}
+
+// --- StripNearEqual tests ---
+
+#[test]
+fn test_strip_near_equal_basic() {
+    let path: PathD = vec![
+        PointD::new(0.0, 0.0),
+        PointD::new(0.1, 0.1),
+        PointD::new(10.0, 10.0),
+        PointD::new(10.05, 10.05),
+        PointD::new(20.0, 20.0),
+    ];
+    // With threshold of 1.0 (max_dist_sqrd), 0.1^2 + 0.1^2 = 0.02 < 1.0
+    let result = strip_near_equal(&path, 1.0, false);
+    assert_eq!(result.len(), 3); // should keep (0,0), (10,10), (20,20)
+    assert_eq!(result[0], PointD::new(0.0, 0.0));
+    assert_eq!(result[1], PointD::new(10.0, 10.0));
+    assert_eq!(result[2], PointD::new(20.0, 20.0));
+}
+
+#[test]
+fn test_strip_near_equal_closed_path() {
+    let path: PathD = vec![
+        PointD::new(0.0, 0.0),
+        PointD::new(10.0, 0.0),
+        PointD::new(10.0, 10.0),
+        PointD::new(0.05, 0.05), // near first point
+    ];
+    let result = strip_near_equal(&path, 1.0, true);
+    assert_eq!(result.len(), 3); // last point removed (near first)
+}
+
+#[test]
+fn test_strip_near_equal_empty() {
+    let path: PathD = vec![];
+    let result = strip_near_equal(&path, 1.0, false);
+    assert!(result.is_empty());
+}
+
+#[test]
+fn test_strip_near_equal_single_point() {
+    let path: PathD = vec![PointD::new(1.0, 2.0)];
+    let result = strip_near_equal(&path, 1.0, false);
+    assert_eq!(result.len(), 1);
+}
+
+#[test]
+fn test_strip_near_equal_paths_basic() {
+    let paths: PathsD = vec![
+        vec![
+            PointD::new(0.0, 0.0),
+            PointD::new(0.01, 0.01),
+            PointD::new(10.0, 10.0),
+        ],
+        vec![
+            PointD::new(5.0, 5.0),
+            PointD::new(5.0, 5.0),
+            PointD::new(15.0, 15.0),
+        ],
+    ];
+    let result = strip_near_equal_paths(&paths, 1.0, false);
+    assert_eq!(result.len(), 2);
+    assert_eq!(result[0].len(), 2); // stripped near-equal
+    assert_eq!(result[1].len(), 2); // stripped duplicate
+}
+
+// --- TranslatePoint tests ---
+
+#[test]
+fn test_translate_point_i64() {
+    let pt = Point64::new(10, 20);
+    let result = translate_point(&pt, 5.0, -3.0);
+    assert_eq!(result, Point64::new(15, 17));
+}
+
+#[test]
+fn test_translate_point_f64() {
+    let pt = PointD::new(1.0, 2.0);
+    let result = translate_point(&pt, 0.5, 0.5);
+    assert!((result.x - 1.5).abs() < 1e-10);
+    assert!((result.y - 2.5).abs() < 1e-10);
+}
+
+#[test]
+fn test_translate_point_zero() {
+    let pt = Point64::new(42, 99);
+    let result = translate_point(&pt, 0.0, 0.0);
+    assert_eq!(result, pt);
+}
+
+#[test]
+fn test_translate_point_negative() {
+    let pt = Point64::new(100, 200);
+    let result = translate_point(&pt, -50.0, -100.0);
+    assert_eq!(result, Point64::new(50, 100));
+}
+
+// --- ReflectPoint tests ---
+
+#[test]
+fn test_reflect_point_basic() {
+    let pt = Point64::new(10, 20);
+    let pivot = Point64::new(15, 25);
+    let result = reflect_point(&pt, &pivot);
+    assert_eq!(result, Point64::new(20, 30));
+}
+
+#[test]
+fn test_reflect_point_origin() {
+    let pt = Point64::new(5, 5);
+    let pivot = Point64::new(0, 0);
+    let result = reflect_point(&pt, &pivot);
+    assert_eq!(result, Point64::new(-5, -5));
+}
+
+#[test]
+fn test_reflect_point_same() {
+    let pt = Point64::new(10, 20);
+    let result = reflect_point(&pt, &pt);
+    assert_eq!(result, pt);
+}
+
+#[test]
+fn test_reflect_point_f64() {
+    let pt = PointD::new(1.0, 2.0);
+    let pivot = PointD::new(3.0, 4.0);
+    let result = reflect_point(&pt, &pivot);
+    assert!((result.x - 5.0).abs() < 1e-10);
+    assert!((result.y - 6.0).abs() < 1e-10);
+}
+
+// --- GetSign tests ---
+
+#[test]
+fn test_get_sign_positive() {
+    assert_eq!(get_sign(&5i64), 1);
+    assert_eq!(get_sign(&1i64), 1);
+    assert_eq!(get_sign(&100.0f64), 1);
+    assert_eq!(get_sign(&0.001f64), 1);
+}
+
+#[test]
+fn test_get_sign_negative() {
+    assert_eq!(get_sign(&-5i64), -1);
+    assert_eq!(get_sign(&-1i64), -1);
+    assert_eq!(get_sign(&-100.0f64), -1);
+    assert_eq!(get_sign(&-0.001f64), -1);
+}
+
+#[test]
+fn test_get_sign_zero() {
+    assert_eq!(get_sign(&0i64), 0);
+    assert_eq!(get_sign(&0.0f64), 0);
+}
+
+// --- CrossProductSign tests ---
+
+#[test]
+fn test_cross_product_sign_positive() {
+    // Counter-clockwise turn -> positive cross product
+    let pt1 = Point64::new(0, 0);
+    let pt2 = Point64::new(10, 0);
+    let pt3 = Point64::new(10, 10);
+    assert_eq!(cross_product_sign(pt1, pt2, pt3), 1);
+}
+
+#[test]
+fn test_cross_product_sign_negative() {
+    // Clockwise turn -> negative cross product
+    let pt1 = Point64::new(0, 0);
+    let pt2 = Point64::new(10, 0);
+    let pt3 = Point64::new(10, -10);
+    assert_eq!(cross_product_sign(pt1, pt2, pt3), -1);
+}
+
+#[test]
+fn test_cross_product_sign_collinear() {
+    let pt1 = Point64::new(0, 0);
+    let pt2 = Point64::new(5, 5);
+    let pt3 = Point64::new(10, 10);
+    assert_eq!(cross_product_sign(pt1, pt2, pt3), 0);
+}
+
+#[test]
+fn test_cross_product_sign_large_values() {
+    // Test with values that would overflow 64-bit multiplication
+    let large = i64::MAX / 4;
+    let pt1 = Point64::new(0, 0);
+    let pt2 = Point64::new(large, 0);
+    let pt3 = Point64::new(large, large);
+    assert_eq!(cross_product_sign(pt1, pt2, pt3), 1);
+}
+
+#[test]
+fn test_cross_product_sign_consistency_with_cross_product() {
+    // Verify sign matches the floating-point cross product
+    let test_cases = [
+        (Point64::new(0, 0), Point64::new(10, 0), Point64::new(5, 5)),
+        (Point64::new(0, 0), Point64::new(10, 0), Point64::new(5, -5)),
+        (
+            Point64::new(0, 0),
+            Point64::new(10, 10),
+            Point64::new(20, 20),
+        ),
+        (
+            Point64::new(-100, -100),
+            Point64::new(100, 50),
+            Point64::new(50, 200),
+        ),
+    ];
+
+    for (pt1, pt2, pt3) in test_cases {
+        let cp = cross_product_three_points(pt1, pt2, pt3);
+        let cps = cross_product_sign(pt1, pt2, pt3);
+        if cp > 0.0 {
+            assert_eq!(cps, 1, "Mismatch for {:?}, {:?}, {:?}", pt1, pt2, pt3);
+        } else if cp < 0.0 {
+            assert_eq!(cps, -1, "Mismatch for {:?}, {:?}, {:?}", pt1, pt2, pt3);
+        } else {
+            assert_eq!(cps, 0, "Mismatch for {:?}, {:?}, {:?}", pt1, pt2, pt3);
+        }
+    }
+}
+
+// --- SegmentsIntersect tests ---
+
+#[test]
+fn test_segments_intersect_crossing() {
+    let a = Point64::new(0, 0);
+    let b = Point64::new(10, 10);
+    let c = Point64::new(0, 10);
+    let d = Point64::new(10, 0);
+    assert!(segments_intersect(a, b, c, d, false));
+    assert!(segments_intersect(a, b, c, d, true));
+}
+
+#[test]
+fn test_segments_intersect_parallel() {
+    let a = Point64::new(0, 0);
+    let b = Point64::new(10, 0);
+    let c = Point64::new(0, 5);
+    let d = Point64::new(10, 5);
+    assert!(!segments_intersect(a, b, c, d, false));
+    assert!(!segments_intersect(a, b, c, d, true));
+}
+
+#[test]
+fn test_segments_intersect_non_crossing() {
+    let a = Point64::new(0, 0);
+    let b = Point64::new(5, 5);
+    let c = Point64::new(6, 0);
+    let d = Point64::new(10, 0);
+    assert!(!segments_intersect(a, b, c, d, false));
+}
+
+#[test]
+fn test_segments_intersect_t_shape_inclusive() {
+    // Segment endpoint touches the other segment
+    let a = Point64::new(0, 0);
+    let b = Point64::new(10, 0);
+    let c = Point64::new(5, 5);
+    let d = Point64::new(5, 0);
+    // With inclusive=true, touching at endpoint should count
+    assert!(segments_intersect(a, b, c, d, true));
+    // With inclusive=false, should not count
+    assert!(!segments_intersect(a, b, c, d, false));
+}
+
+#[test]
+fn test_segments_intersect_collinear() {
+    // Collinear segments (overlapping)
+    let a = Point64::new(0, 0);
+    let b = Point64::new(10, 0);
+    let c = Point64::new(5, 0);
+    let d = Point64::new(15, 0);
+    // Collinear segments should return false even with inclusive
+    assert!(!segments_intersect(a, b, c, d, true));
+}
+
+// --- GetClosestPointOnSegment tests ---
+
+#[test]
+fn test_closest_point_on_segment_midpoint() {
+    let off = Point64::new(5, 10);
+    let seg1 = Point64::new(0, 0);
+    let seg2 = Point64::new(10, 0);
+    let result = get_closest_point_on_segment(off, seg1, seg2);
+    assert_eq!(result, Point64::new(5, 0));
+}
+
+#[test]
+fn test_closest_point_on_segment_start() {
+    let off = Point64::new(-5, 5);
+    let seg1 = Point64::new(0, 0);
+    let seg2 = Point64::new(10, 0);
+    let result = get_closest_point_on_segment(off, seg1, seg2);
+    assert_eq!(result, Point64::new(0, 0));
+}
+
+#[test]
+fn test_closest_point_on_segment_end() {
+    let off = Point64::new(15, 5);
+    let seg1 = Point64::new(0, 0);
+    let seg2 = Point64::new(10, 0);
+    let result = get_closest_point_on_segment(off, seg1, seg2);
+    assert_eq!(result, Point64::new(10, 0));
+}
+
+#[test]
+fn test_closest_point_on_segment_degenerate() {
+    let off = Point64::new(5, 5);
+    let seg1 = Point64::new(3, 3);
+    let seg2 = Point64::new(3, 3); // degenerate segment (point)
+    let result = get_closest_point_on_segment(off, seg1, seg2);
+    assert_eq!(result, Point64::new(3, 3));
+}
+
+#[test]
+fn test_closest_point_on_segment_f64() {
+    let off = PointD::new(5.0, 10.0);
+    let seg1 = PointD::new(0.0, 0.0);
+    let seg2 = PointD::new(10.0, 0.0);
+    let result = get_closest_point_on_segment(off, seg1, seg2);
+    assert!((result.x - 5.0).abs() < 1e-10);
+    assert!((result.y - 0.0).abs() < 1e-10);
+}
+
+#[test]
+fn test_closest_point_on_segment_diagonal() {
+    let off = PointD::new(0.0, 10.0);
+    let seg1 = PointD::new(0.0, 0.0);
+    let seg2 = PointD::new(10.0, 10.0);
+    let result = get_closest_point_on_segment(off, seg1, seg2);
+    // Projection of (0,10) onto line from (0,0) to (10,10)
+    // q = ((0-0)*10 + (10-0)*10) / (100+100) = 100/200 = 0.5
+    // result = (0 + 0.5*10, 0 + 0.5*10) = (5, 5)
+    assert!((result.x - 5.0).abs() < 1e-10);
+    assert!((result.y - 5.0).abs() < 1e-10);
+}
+
+// --- FromF64 trait tests ---
+
+#[test]
+fn test_from_f64_i64_rounding() {
+    assert_eq!(i64::from_f64(1.4), 1);
+    assert_eq!(i64::from_f64(1.5), 2);
+    assert_eq!(i64::from_f64(1.6), 2);
+    assert_eq!(i64::from_f64(-1.4), -1);
+    assert_eq!(i64::from_f64(-1.5), -2);
+    assert_eq!(i64::from_f64(-1.6), -2);
+}
+
+#[test]
+fn test_from_f64_f64_exact() {
+    assert_eq!(f64::from_f64(1.4), 1.4);
+    assert_eq!(f64::from_f64(-1.5), -1.5);
+    assert_eq!(f64::from_f64(0.0), 0.0);
+}
+
+#[test]
+fn test_is_integral() {
+    assert!(i64::is_integral());
+    assert!(!f64::is_integral());
 }

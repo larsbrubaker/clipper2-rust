@@ -15,15 +15,21 @@
 // Module structure mirrors C++ header organization
 // Following STRICT RULES - only include implemented modules
 pub mod core;
-pub mod version; // clipper.version.h - Version constants (IMPLEMENTED) // clipper.core.h - Core types and basic functions (IMPLEMENTED)
+pub mod engine;
+pub mod engine_fns;
+pub mod engine_public;
+pub mod rectclip;
+pub mod version;
 
 // Future modules to implement in dependency order (NO STUBS ALLOWED):
-// pub mod engine;   // clipper.engine.h - Main clipping engine
 // pub mod offset;   // clipper.offset.h - Path offsetting
-// pub mod rectclip; // clipper.rectclip.h - Rectangle clipping
 // pub mod minkowski; // clipper.minkowski.h - Minkowski operations
 // pub mod export;   // clipper.export.h - Export utilities
 
 // Re-export implemented types and functions only
 pub use core::*;
+pub use engine::*;
+pub use engine_fns::*;
+pub use engine_public::*;
+pub use rectclip::*;
 pub use version::*;

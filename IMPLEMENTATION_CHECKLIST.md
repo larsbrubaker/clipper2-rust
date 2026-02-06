@@ -480,7 +480,7 @@
 - TODO PENDING `void GetIntersection()` (line 531)
 - TODO PENDING `void AddCorner()` (line 533)
 - TODO PENDING `void Add()` (line 542)
-- TODO PENDING `void GetLocation()` (line 546)
+- DONE TESTED `void GetLocation()` (line 546)
 - TODO PENDING `void AddCorner()` (line 547)
 - TODO PENDING `void Add()` (line 559)
 - TODO PENDING `void Add()` (line 580)
@@ -927,9 +927,9 @@
 ## IMPLEMENTATION PROGRESS
 
 - **Total Functions**: 792
-- **Implemented**: 49 (6.2%)
-- **Tested**: 49 (6.2%)
-- **Remaining**: 743 functions
+- **Implemented**: 50 (6.3%)
+- **Tested**: 50 (6.3%)
+- **Remaining**: 742 functions
 
 ## LEGEND
 
