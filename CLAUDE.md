@@ -1,143 +1,106 @@
-# CLIPPER2 RUST PORT - STRICT IMPLEMENTATION RULES
+# Claude Code Guidelines
 
-## ZERO TOLERANCE POLICY
+## Philosophy
 
-This project follows a **ZERO TOLERANCE POLICY** for incomplete implementations. Every rule below is **MANDATORY** and **NON-NEGOTIABLE**.
+**Quality through iterations** - Start with correct implementations, then improve. Code that doesn't matter can be quick and dirty. But code that matters *really* matters—treat it with respect and improve it meticulously. In a porting project, every function matters.
 
-### RULE 1: COMPLETE FUNCTIONS ONLY
-- **NO** `todo!()` macros allowed
-- **NO** `unimplemented!()` macros allowed  
-- **NO** `panic!("not implemented")` allowed
-- **NO** stub functions or placeholder implementations
-- **NO** partial implementations that "work for basic cases"
-- EVERY function must be **COMPLETE** and **PRODUCTION-READY**
+**Circumstances alter cases** - Use judgment. There are no rigid rules—context determines the right approach. However, this project has strong defaults because porting demands precision.
 
-### RULE 2: STRICT DEPENDENCY ENFORCEMENT
-- Functions **CANNOT** be implemented if their dependencies are incomplete
-- Implementation **MUST WAIT** until ALL dependency functions are:
-  - Fully implemented
-  - Fully tested
-  - Marked as complete in database
-- Implementation order **MUST** follow dependency chain strictly
-- **NO EXCEPTIONS** - even if "it would be easy to stub this one call"
+**No stubs, no shortcuts** - Every function must be complete and production-ready. No `todo!()`, no `unimplemented!()`, no `panic!("not implemented")`, no partial implementations. If dependencies aren't ready, stop and implement them first.
 
-### RULE 3: MANDATORY COMPREHENSIVE TESTING  
-- **EVERY** function must have unit tests before marking as complete
-- Tests must cover **ALL** edge cases and error conditions
-- Tests must verify **EXACT** behavioral match with C++ implementation
-- **NO** function is considered "complete" until tests pass 100%
-- Test coverage must be comprehensive, not just basic happy path
+## Test-First Bug Fixing (Critical Practice)
 
-### RULE 4: EXACT BEHAVIORAL MATCHING
-- Rust implementation must match C++ behavior **EXACTLY**
+**This is the single most important practice for agent performance and reliability.**
+
+When a bug is reported, always follow this workflow:
+
+1. **Write a reproducing test first** - Create a test that fails, demonstrating the bug
+2. **Fix the bug** - Make the minimal change needed to address the issue
+3. **Verify via passing test** - The previously failing test should now pass
+
+This approach works because:
+- The failing test proves you understand the bug
+- The fix is verifiable, not just "looks right"
+- You can't accidentally break it again (regression protection)
+- It aligns with the principle that coding is high-leverage because it's **partially verifiable**
+
+**Do not skip the reproducing test.** Even if the fix seems obvious, the test validates your understanding and prevents regressions.
+
+## Testing
+
+- Tests MUST test actual production code, not copies - Never duplicate production logic in tests. Import and call the real code. Tests that verify copied code prove nothing about the actual system.
+- Tests should run as fast as possible—fast tests get run more often
+- Write tests for regressions and complex logic
+- Avoid redundant tests that verify the same behavior
+- All tests must pass before merging
+- Tests must verify **exact behavioral match** with the C++ implementation
+- When test failures occur, use the fix-test-failures agent (`.claude/agents/fix-test-failures.md`) — it treats all failures as real bugs and resolves them through instrumentation and root cause analysis, never by weakening tests
+
+**Running tests:**
+```bash
+# Run all tests
+cargo test
+
+# Run tests for a specific module
+cargo test --lib core_tests
+cargo test --lib engine_tests
+
+# Run a specific test
+cargo test test_name -- --exact
+
+# Run with output
+cargo test -- --nocapture
+```
+
+## Code Quality
+
+**Names** - Choose carefully. Good names make code self-documenting. Rust names should follow Rust conventions (`snake_case` for functions/variables, `PascalCase` for types, `SCREAMING_SNAKE_CASE` for constants).
+
+**Comments** - Explain *why*, not *what*. The code shows what it does; comments should reveal intent, tradeoffs, and non-obvious reasoning. When porting from C++, comments explaining *why* the Rust approach differs from C++ are especially valuable.
+
+**Refactoring** - Improve code when it serves a purpose, not for aesthetics. Refactor to fix bugs, add features, or improve clarity when you're already working in that area.
+
+## C++ to Rust Porting Rules
+
+This project is a strict port of the Clipper2 C++ library to Rust. These rules ensure fidelity:
+
+### Exact Behavioral Matching
+- Rust implementation must match C++ behavior exactly
 - Same algorithms, same mathematical precision
 - Same edge case handling, same error conditions
 - Same performance characteristics (or better)
-- **NO** "close enough" implementations
+- No "close enough" implementations
 
-### RULE 5: DATABASE TRACKING MANDATORY
-- **EVERY** implementation step must be tracked in SQLite database
-- Functions marked as `rust_implemented = 1` **MUST** be complete
-- Functions marked as `rust_tested = 1` **MUST** have passing tests
-- **NO** marking as complete until requirements are 100% met
+### Dependency-Ordered Implementation
+Before implementing any function:
+1. Query the database (`clipper2_complete.db`) for all functions called by the target function
+2. Verify all dependencies are marked `rust_implemented = 1` AND `rust_tested = 1`
+3. If any dependency is incomplete, implement dependencies first
 
-### RULE 6: NO SHORTCUTS OR COMPROMISES
-- **NO** "temporary workarounds" 
-- **NO** "we'll come back to this later"
-- **NO** "good enough for now"
-- **NO** "this edge case probably doesn't matter"
-- If you encounter ANY dependency or complexity issue, **STOP** and resolve dependencies first
+### Database Tracking
+- Every implementation step must be tracked in the SQLite database (`clipper2_complete.db`)
+- Functions marked as `rust_implemented = 1` must be genuinely complete
+- Functions marked as `rust_tested = 1` must have comprehensive passing tests
+- Only mark as complete when requirements are 100% met
 
-## IMPLEMENTATION PROCESS
-
-### Step 1: Dependency Analysis
-Before implementing ANY function:
-1. Query database for ALL functions called by target function
-2. Verify ALL dependencies are marked `rust_implemented = 1` AND `rust_tested = 1` 
-3. If ANY dependency is incomplete, **STOP** - implement dependencies first
-
-### Step 2: Implementation
-1. Study C++ implementation in detail
-2. Understand ALL edge cases and error conditions
-3. Implement in Rust with exact behavioral matching
-4. Handle ALL the same input validation and error cases
-
-### Step 3: Testing
-1. Create comprehensive unit tests
-2. Test ALL edge cases, not just happy path
-3. Verify exact match with C++ behavior
-4. Ensure 100% test pass rate
-
-### Step 4: Database Update
-1. Update database: `rust_implemented = 1`
-2. Update database: `rust_tested = 1`  
-3. **ONLY** after both implementation and testing are complete
-
-## VERIFICATION COMMANDS
-
+### Verification
 Before any implementation session:
 ```bash
 python function_verifier.py
 ```
 
-This will verify:
-- Database completeness (all 790 functions captured)
-- Implementation status
-- Dependency readiness
-
-## QUALITY GATES
-
-### Gate 1: Dependency Check
-**FAIL IMMEDIATELY** if implementing a function with incomplete dependencies
-
-### Gate 2: Implementation Review
-**FAIL IMMEDIATELY** if implementation uses any forbidden patterns:
-- `todo!()`
-- `unimplemented!()`
+### Forbidden Patterns
+- `todo!()` or `unimplemented!()` macros
 - `panic!()` for missing functionality
-- Stub functions
-- Partial implementations
+- Stub functions or placeholder implementations
+- Implementing without dependencies ready
+- Marking functions complete prematurely
+- "Close enough" or "good enough for now" implementations
 
-### Gate 3: Testing Verification  
-**FAIL IMMEDIATELY** if:
-- Tests don't exist
-- Tests don't cover edge cases
-- Any test fails
-- Behavior doesn't exactly match C++
-
-## IMPLEMENTATION DATABASE
+## Implementation Database
 
 Complete analysis database: `clipper2_complete.db`
 - **790 functions** total across all files
-- **56 classes/structs** 
+- **56 classes/structs**
 - **11 enums**
 - **857 total items** to implement
-
-## FORBIDDEN PRACTICES
-
-The following are **STRICTLY FORBIDDEN** and will result in immediate rejection:
-
-❌ Writing stub functions  
-❌ Using `todo!()` or `unimplemented!()`  
-❌ Implementing without dependencies ready  
-❌ Skipping comprehensive tests  
-❌ "Close enough" implementations  
-❌ Marking functions complete prematurely  
-❌ Any shortcuts or compromises  
-
-## REQUIRED PRACTICES
-
-The following are **MANDATORY**:
-
-✅ Complete dependency analysis before implementation  
-✅ Exact behavioral matching with C++  
-✅ Comprehensive unit testing  
-✅ Database tracking of all progress  
-✅ Zero tolerance for incomplete work  
-✅ Production-ready code only  
-
-## REMEMBER
-
-**NO STUBS. NO TODOS. NO EXCEPTIONS.**
-
-Every function must be **perfect** before moving to the next one. This is not negotiable.

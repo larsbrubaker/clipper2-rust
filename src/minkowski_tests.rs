@@ -13,8 +13,7 @@
 
 use super::*;
 use crate::core::{
-    area, area_paths, get_bounds_paths, point_in_polygon, Point64, PointD,
-    PointInPolygonResult,
+    area, area_paths, get_bounds_paths, point_in_polygon, Point64, PointD, PointInPolygonResult,
 };
 
 // ============================================================================
@@ -64,7 +63,10 @@ fn test_minkowski_sum_empty_pattern() {
     let pattern: Path64 = vec![];
     let path = make_square(100);
     let result = minkowski_sum(&pattern, &path, true);
-    assert!(result.is_empty(), "Empty pattern should produce empty result");
+    assert!(
+        result.is_empty(),
+        "Empty pattern should produce empty result"
+    );
 }
 
 #[test]
@@ -88,7 +90,10 @@ fn test_minkowski_diff_empty_pattern() {
     let pattern: Path64 = vec![];
     let path = make_square(100);
     let result = minkowski_diff(&pattern, &path, true);
-    assert!(result.is_empty(), "Empty pattern should produce empty result");
+    assert!(
+        result.is_empty(),
+        "Empty pattern should produce empty result"
+    );
 }
 
 #[test]
@@ -214,7 +219,10 @@ fn test_minkowski_sum_open_path() {
     let path = make_line_segment(0, 0, 100, 0);
     let result = minkowski_sum(&pattern, &path, false);
 
-    assert!(!result.is_empty(), "Result should not be empty for open path");
+    assert!(
+        !result.is_empty(),
+        "Result should not be empty for open path"
+    );
 
     // The result should encompass a rectangle-like shape around the line segment
     let bounds = get_bounds_paths(&result);
@@ -266,7 +274,10 @@ fn test_minkowski_diff_same_shape() {
     let shape = make_square(50);
     let result = minkowski_diff(&shape, &shape, true);
 
-    assert!(!result.is_empty(), "Diff of shape with itself should not be empty");
+    assert!(
+        !result.is_empty(),
+        "Diff of shape with itself should not be empty"
+    );
 
     // The origin should be inside the result
     if !result.is_empty() && result[0].len() >= 3 {
@@ -287,7 +298,10 @@ fn test_minkowski_diff_open_path() {
     let result = minkowski_diff(&pattern, &path, false);
 
     // Should produce some output without panicking
-    assert!(!result.is_empty(), "Diff with open path should produce result");
+    assert!(
+        !result.is_empty(),
+        "Diff with open path should produce result"
+    );
 }
 
 // ============================================================================
@@ -616,7 +630,10 @@ fn test_minkowski_sum_three_point_path_open() {
     ];
     let result = minkowski_sum(&pattern, &path, false);
 
-    assert!(!result.is_empty(), "L-shaped open path should produce result");
+    assert!(
+        !result.is_empty(),
+        "L-shaped open path should produce result"
+    );
     let total_area = area_paths(&result).abs();
     assert!(total_area > 0.0, "Result should have positive area");
 }
@@ -744,10 +761,7 @@ fn test_debug_square_with_square() {
         let a = area(p);
         let bounds = if !p.is_empty() {
             let b = get_bounds_paths(&vec![p.clone()]);
-            format!(
-                "[({}, {}) to ({}, {})]",
-                b.left, b.top, b.right, b.bottom
-            )
+            format!("[({}, {}) to ({}, {})]", b.left, b.top, b.right, b.bottom)
         } else {
             "empty".to_string()
         };
@@ -762,7 +776,10 @@ fn test_debug_square_with_square() {
     }
 
     let total_abs_area = area_paths(&result).abs();
-    eprintln!("\nTotal signed area (sum of path areas): {:.1}", total_result_area);
+    eprintln!(
+        "\nTotal signed area (sum of path areas): {:.1}",
+        total_result_area
+    );
     eprintln!("Total area via area_paths (abs): {:.1}", total_abs_area);
     eprintln!("Expected area: 14400.0  (120 x 120)");
     eprintln!("=== END DEBUG ===");

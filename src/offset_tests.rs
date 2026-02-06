@@ -428,7 +428,10 @@ fn test_offset_single_point_round() {
     let mut result = Paths64::new();
     co.execute(20.0, &mut result);
 
-    assert!(!result.is_empty(), "Single point offset should produce a circle");
+    assert!(
+        !result.is_empty(),
+        "Single point offset should produce a circle"
+    );
     let result_area: f64 = result.iter().map(|p| area(p).abs()).sum();
     // Expected: approximately PI * 20^2 = ~1257
     let expected_area = constants::PI * 20.0 * 20.0;
@@ -449,7 +452,10 @@ fn test_offset_single_point_square() {
     let mut result = Paths64::new();
     co.execute(20.0, &mut result);
 
-    assert!(!result.is_empty(), "Single point offset should produce a square");
+    assert!(
+        !result.is_empty(),
+        "Single point offset should produce a square"
+    );
     let result_area: f64 = result.iter().map(|p| area(p).abs()).sum();
     // Expected: approximately (2*20)^2 = 1600
     // The rect is (x-d, y-d) to (x+d, y+d) where d = ceil(20) = 20
@@ -756,7 +762,6 @@ fn test_offset_no_groups() {
     assert!(result.is_empty());
 }
 
-
 #[test]
 fn test_offset_zero_delta() {
     // Zero delta should return original paths
@@ -850,7 +855,7 @@ fn test_offset_preserve_collinear() {
     // Square with an extra collinear point on one edge
     let square_with_collinear = vec![
         Point64::new(0, 0),
-        Point64::new(50, 0),  // collinear with 0,0 -> 100,0
+        Point64::new(50, 0), // collinear with 0,0 -> 100,0
         Point64::new(100, 0),
         Point64::new(100, 100),
         Point64::new(0, 100),

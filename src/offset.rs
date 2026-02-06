@@ -569,10 +569,8 @@ impl ClipperOffset {
                 path[j].y as f64 + self.group_delta * self.norms[j].y,
             );
         }
-        self.path_out
-            .push(point64_from_f(pt1.x, pt1.y));
-        self.path_out
-            .push(point64_from_f(pt2.x, pt2.y));
+        self.path_out.push(point64_from_f(pt1.x, pt1.y));
+        self.path_out.push(point64_from_f(pt2.x, pt2.y));
     }
 
     /// Square join implementation.
@@ -594,16 +592,8 @@ impl ClipperOffset {
         let pt_q = PointD::new(path[j].x as f64, path[j].y as f64);
         let pt_q = translate_point(&pt_q, abs_delta * vec.x, abs_delta * vec.y);
         // Get perpendicular vertices
-        let pt1 = translate_point(
-            &pt_q,
-            self.group_delta * vec.y,
-            self.group_delta * -vec.x,
-        );
-        let pt2 = translate_point(
-            &pt_q,
-            self.group_delta * -vec.y,
-            self.group_delta * vec.x,
-        );
+        let pt1 = translate_point(&pt_q, self.group_delta * vec.y, self.group_delta * -vec.x);
+        let pt2 = translate_point(&pt_q, self.group_delta * -vec.y, self.group_delta * vec.x);
         // Get 2 vertices along one edge offset
         let pt3 = get_perpendic_d(&path[k], &self.norms[k], self.group_delta);
 
@@ -616,20 +606,16 @@ impl ClipperOffset {
             get_segment_intersect_pt_d(pt1, pt2, pt3, pt4, &mut pt);
             // Get the second intersect point through reflection
             let reflected = reflect_point(&pt, &pt_q);
-            self.path_out
-                .push(point64_from_f(reflected.x, reflected.y));
-            self.path_out
-                .push(point64_from_f(pt.x, pt.y));
+            self.path_out.push(point64_from_f(reflected.x, reflected.y));
+            self.path_out.push(point64_from_f(pt.x, pt.y));
         } else {
             let pt4 = get_perpendic_d(&path[j], &self.norms[k], self.group_delta);
             let mut pt = pt_q;
             get_segment_intersect_pt_d(pt1, pt2, pt3, pt4, &mut pt);
-            self.path_out
-                .push(point64_from_f(pt.x, pt.y));
+            self.path_out.push(point64_from_f(pt.x, pt.y));
             // Get the second intersect point through reflection
             let reflected = reflect_point(&pt, &pt_q);
-            self.path_out
-                .push(point64_from_f(reflected.x, reflected.y));
+            self.path_out.push(point64_from_f(reflected.x, reflected.y));
         }
     }
 
@@ -674,11 +660,10 @@ impl ClipperOffset {
         if j == k {
             offset_vec = offset_vec.negate();
         }
-        self.path_out
-            .push(point64_from_f(
-                pt.x as f64 + offset_vec.x,
-                pt.y as f64 + offset_vec.y,
-            ));
+        self.path_out.push(point64_from_f(
+            pt.x as f64 + offset_vec.x,
+            pt.y as f64 + offset_vec.y,
+        ));
 
         let steps = (self.steps_per_rad * angle.abs()).ceil() as i32; // #448, #456
         for _ in 1..steps {
@@ -687,11 +672,10 @@ impl ClipperOffset {
                 offset_vec.x * self.step_cos - self.step_sin * offset_vec.y,
                 offset_vec.x * self.step_sin + offset_vec.y * self.step_cos,
             );
-            self.path_out
-                .push(point64_from_f(
-                    pt.x as f64 + offset_vec.x,
-                    pt.y as f64 + offset_vec.y,
-                ));
+            self.path_out.push(point64_from_f(
+                pt.x as f64 + offset_vec.x,
+                pt.y as f64 + offset_vec.y,
+            ));
         }
         self.path_out
             .push(get_perpendic(&path[j], &self.norms[j], self.group_delta));
@@ -737,17 +721,11 @@ impl ClipperOffset {
             // regions. These regions will be removed later by the finishing union
             // operation. This is also the best way to ensure that path reversals
             // (ie over-shrunk paths) are removed.
-            self.path_out.push(get_perpendic(
-                &path[j],
-                &self.norms[k],
-                self.group_delta,
-            ));
+            self.path_out
+                .push(get_perpendic(&path[j], &self.norms[k], self.group_delta));
             self.path_out.push(path[j]); // (#405, #873, #916)
-            self.path_out.push(get_perpendic(
-                &path[j],
-                &self.norms[j],
-                self.group_delta,
-            ));
+            self.path_out
+                .push(get_perpendic(&path[j], &self.norms[j], self.group_delta));
         } else if cos_a > 0.999 && self.join_type != JoinType::Round {
             // Almost straight - less than 2.5 degree (#424, #482, #526 & #724)
             self.do_miter(path, j, k, cos_a);

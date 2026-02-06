@@ -28,12 +28,7 @@ use crate::FillRule;
 /// * `path` - The path along which the pattern is translated
 /// * `is_sum` - If true, computes sum (p + pattern); if false, computes difference (p - pattern)
 /// * `is_closed` - If true, the path is treated as closed (last point connects to first)
-fn minkowski_internal(
-    pattern: &Path64,
-    path: &Path64,
-    is_sum: bool,
-    is_closed: bool,
-) -> Paths64 {
+fn minkowski_internal(pattern: &Path64, path: &Path64, is_sum: bool, is_closed: bool) -> Paths64 {
     let delta: usize = if is_closed { 0 } else { 1 };
     let pat_len = pattern.len();
     let path_len = path.len();
