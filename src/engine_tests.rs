@@ -323,9 +323,10 @@ fn test_clipper_base_scanline() {
     cb.insert_scanline(5);
     cb.insert_scanline(10); // duplicate
 
-    assert_eq!(cb.pop_scanline(), Some(5));
-    assert_eq!(cb.pop_scanline(), Some(10)); // duplicate removed
+    // Max-heap: pops largest y first (matching C++ std::priority_queue behavior)
     assert_eq!(cb.pop_scanline(), Some(20));
+    assert_eq!(cb.pop_scanline(), Some(10)); // duplicate removed
+    assert_eq!(cb.pop_scanline(), Some(5));
     assert_eq!(cb.pop_scanline(), None);
 }
 
@@ -606,4 +607,171 @@ fn test_reverse_out_pts() {
     assert_eq!(outpt_arena[1].prev, 2);
     assert_eq!(outpt_arena[2].next, 1);
     assert_eq!(outpt_arena[2].prev, 0);
+}
+
+// ============================================================================
+// Clipper64 execute integration tests
+// ============================================================================
+
+#[test]
+fn test_clipper64_local_minima_include_both_subject_and_clip() {
+    // Verify that adding subject AND clip paths creates local minima for both
+    let subject = vec![
+        Point64::new(-100, -100),
+        Point64::new(100, -100),
+        Point64::new(100, 100),
+        Point64::new(-100, 100),
+    ];
+    let clip = vec![
+        Point64::new(-50, -50),
+        Point64::new(150, -50),
+        Point64::new(150, 150),
+        Point64::new(-50, 150),
+    ];
+    let mut c = Clipper64::new();
+    c.add_subject(&vec![subject]);
+    c.add_clip(&vec![clip]);
+
+    // After adding both, the base should have local minima for both polygons
+    let subject_minima: Vec<_> = c
+        .base
+        .minima_list
+        .iter()
+        .filter(|lm| lm.polytype == PathType::Subject)
+        .collect();
+    let clip_minima: Vec<_> = c
+        .base
+        .minima_list
+        .iter()
+        .filter(|lm| lm.polytype == PathType::Clip)
+        .collect();
+
+    assert!(
+        !subject_minima.is_empty(),
+        "Should have Subject local minima"
+    );
+    assert!(
+        !clip_minima.is_empty(),
+        "Should have Clip local minima, got 0. Total minima: {}",
+        c.base.minima_list.len()
+    );
+}
+
+#[test]
+fn test_clipper64_intersection_two_overlapping_squares() {
+    // Two overlapping squares: Subject at (-100,-100)-(100,100), Clip at (-50,-50)-(150,150)
+    // Intersection should produce the overlap region: (-50,-50)-(100,100) with area 150*150 = 22500
+    let subject = vec![
+        Point64::new(-100, -100),
+        Point64::new(100, -100),
+        Point64::new(100, 100),
+        Point64::new(-100, 100),
+    ];
+    let clip = vec![
+        Point64::new(-50, -50),
+        Point64::new(150, -50),
+        Point64::new(150, 150),
+        Point64::new(-50, 150),
+    ];
+    let mut c = Clipper64::new();
+    c.add_subject(&vec![subject]);
+    c.add_clip(&vec![clip]);
+    let mut result = Paths64::new();
+    c.execute(ClipType::Intersection, FillRule::NonZero, &mut result, None);
+    assert!(!result.is_empty(), "Intersection of overlapping squares must not be empty");
+    let total_area: f64 = result.iter().map(|p| area(p).abs()).sum();
+    assert!(
+        (total_area - 22500.0).abs() < 100.0,
+        "Intersection area should be ~22500, got {}",
+        total_area
+    );
+}
+
+#[test]
+fn test_clipper64_difference_two_overlapping_squares() {
+    // Subject at (-100,-100)-(100,100), Clip at (-50,-50)-(150,150)
+    // Difference should produce Subject minus overlap, area = 40000 - 22500 = 17500
+    let subject = vec![
+        Point64::new(-100, -100),
+        Point64::new(100, -100),
+        Point64::new(100, 100),
+        Point64::new(-100, 100),
+    ];
+    let clip = vec![
+        Point64::new(-50, -50),
+        Point64::new(150, -50),
+        Point64::new(150, 150),
+        Point64::new(-50, 150),
+    ];
+    let mut c = Clipper64::new();
+    c.add_subject(&vec![subject]);
+    c.add_clip(&vec![clip]);
+    let mut result = Paths64::new();
+    c.execute(ClipType::Difference, FillRule::NonZero, &mut result, None);
+    assert!(!result.is_empty(), "Difference of overlapping squares must not be empty");
+    let total_area: f64 = result.iter().map(|p| area(p).abs()).sum();
+    assert!(
+        (total_area - 17500.0).abs() < 100.0,
+        "Difference area should be ~17500, got {}",
+        total_area
+    );
+}
+
+#[test]
+fn test_clipper64_union_two_overlapping_squares() {
+    // Union should produce combined area = 40000 + 40000 - 22500 = 57500
+    let subject = vec![
+        Point64::new(-100, -100),
+        Point64::new(100, -100),
+        Point64::new(100, 100),
+        Point64::new(-100, 100),
+    ];
+    let clip = vec![
+        Point64::new(-50, -50),
+        Point64::new(150, -50),
+        Point64::new(150, 150),
+        Point64::new(-50, 150),
+    ];
+    let mut c = Clipper64::new();
+    c.add_subject(&vec![subject]);
+    c.add_clip(&vec![clip]);
+    let mut result = Paths64::new();
+    c.execute(ClipType::Union, FillRule::NonZero, &mut result, None);
+    assert!(!result.is_empty(), "Union of overlapping squares must not be empty");
+    let total_area: f64 = result.iter().map(|p| area(p).abs()).sum();
+    assert!(
+        (total_area - 57500.0).abs() < 100.0,
+        "Union area should be ~57500, got {}",
+        total_area
+    );
+}
+
+#[test]
+fn test_clipper64_xor_two_overlapping_squares() {
+    // Xor should produce combined minus 2x overlap = 57500 - 2*22500 = 12500? No.
+    // Xor area = Subject + Clip - 2*intersection = 40000 + 40000 - 2*22500 = 35000
+    let subject = vec![
+        Point64::new(-100, -100),
+        Point64::new(100, -100),
+        Point64::new(100, 100),
+        Point64::new(-100, 100),
+    ];
+    let clip = vec![
+        Point64::new(-50, -50),
+        Point64::new(150, -50),
+        Point64::new(150, 150),
+        Point64::new(-50, 150),
+    ];
+    let mut c = Clipper64::new();
+    c.add_subject(&vec![subject]);
+    c.add_clip(&vec![clip]);
+    let mut result = Paths64::new();
+    c.execute(ClipType::Xor, FillRule::NonZero, &mut result, None);
+    assert!(!result.is_empty(), "Xor of overlapping squares must not be empty");
+    let total_area: f64 = result.iter().map(|p| area(p).abs()).sum();
+    assert!(
+        (total_area - 35000.0).abs() < 100.0,
+        "Xor area should be ~35000, got {}",
+        total_area
+    );
 }

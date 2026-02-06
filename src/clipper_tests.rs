@@ -38,16 +38,18 @@ fn square_d(cx: f64, cy: f64, size: f64) -> PathD {
 
 #[test]
 fn test_boolean_op_64_intersection() {
-    // Note: The Clipper64 engine has known pre-existing issues with
-    // ClipType::Intersection. This test verifies the wrapper code
-    // delegates correctly to the engine. The wrapper code is thin and correct.
     let subjects = vec![square_64(0, 0, 100)];
     let clips = vec![square_64(50, 50, 100)];
     let result = boolean_op_64(ClipType::Intersection, FillRule::NonZero, &subjects, &clips);
-    // Engine may return empty due to pre-existing Intersection handling issues.
-    // When the engine is fixed, this should produce a non-empty result.
-    // For now, we just verify it doesn't panic.
-    let _ = result;
+    assert!(!result.is_empty(), "Intersection should produce output");
+    let result_area: f64 = result.iter().map(|p| area(p).abs()).sum();
+    assert!(result_area > 0.0);
+    // Overlap region is a 150x150 square = area 22500
+    assert!(
+        (result_area - 22500.0).abs() < 500.0,
+        "Expected ~22500, got {}",
+        result_area
+    );
 }
 
 #[test]
@@ -82,7 +84,6 @@ fn test_boolean_op_tree_64() {
 
 #[test]
 fn test_boolean_op_d_intersection() {
-    // Wrapper delegates to ClipperD/Clipper64 engine which has known Intersection issues.
     let subjects = vec![square_d(0.0, 0.0, 100.0)];
     let clips = vec![square_d(50.0, 50.0, 100.0)];
     let result = boolean_op_d(
@@ -92,8 +93,7 @@ fn test_boolean_op_d_intersection() {
         &clips,
         2,
     );
-    // Verify no panic; engine may return empty due to pre-existing issues.
-    let _ = result;
+    assert!(!result.is_empty());
 }
 
 // ============================================================================
@@ -102,21 +102,18 @@ fn test_boolean_op_d_intersection() {
 
 #[test]
 fn test_intersect_64() {
-    // Thin wrapper around boolean_op_64 with ClipType::Intersection.
-    // Engine has known Intersection issues; verify wrapper doesn't panic.
     let subjects = vec![square_64(0, 0, 100)];
     let clips = vec![square_64(50, 50, 100)];
     let result = intersect_64(&subjects, &clips, FillRule::NonZero);
-    let _ = result;
+    assert!(!result.is_empty());
 }
 
 #[test]
 fn test_intersect_d() {
-    // Thin wrapper around boolean_op_d with ClipType::Intersection.
     let subjects = vec![square_d(0.0, 0.0, 100.0)];
     let clips = vec![square_d(50.0, 50.0, 100.0)];
     let result = intersect_d(&subjects, &clips, FillRule::NonZero, 2);
-    let _ = result;
+    assert!(!result.is_empty());
 }
 
 #[test]
@@ -151,21 +148,21 @@ fn test_union_subjects_d() {
 
 #[test]
 fn test_difference_64() {
-    // Thin wrapper around boolean_op_64 with ClipType::Difference.
-    // Engine has known issues with Difference; verify wrapper doesn't panic.
     let subjects = vec![square_64(0, 0, 100)];
     let clips = vec![square_64(50, 50, 100)];
     let result = difference_64(&subjects, &clips, FillRule::NonZero);
-    let _ = result;
+    assert!(!result.is_empty());
+    let result_area: f64 = result.iter().map(|p| area(p).abs()).sum();
+    let original = area(&subjects[0]).abs();
+    assert!(result_area < original, "Difference should reduce area");
 }
 
 #[test]
 fn test_difference_d() {
-    // Thin wrapper around boolean_op_d with ClipType::Difference.
     let subjects = vec![square_d(0.0, 0.0, 100.0)];
     let clips = vec![square_d(50.0, 50.0, 100.0)];
     let result = difference_d(&subjects, &clips, FillRule::NonZero, 2);
-    let _ = result;
+    assert!(!result.is_empty());
 }
 
 #[test]

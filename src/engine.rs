@@ -7,7 +7,6 @@
 use crate::core::*;
 use crate::engine_fns::*;
 use crate::engine_public::PolyTree64;
-use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
 // ============================================================================
@@ -378,7 +377,7 @@ pub struct ClipperBase {
     pub sel: Option<usize>,     // index into active_arena
 
     // Scanline priority queue (min-heap using Reverse)
-    scanline_list: BinaryHeap<Reverse<i64>>,
+    scanline_list: BinaryHeap<i64>,
 
     // Intersection and horizontal processing
     pub intersect_nodes: Vec<IntersectNode>,
@@ -440,7 +439,7 @@ impl ClipperBase {
     /// Direct port from clipper.engine.cpp InsertScanline
     #[inline]
     pub fn insert_scanline(&mut self, y: i64) {
-        self.scanline_list.push(Reverse(y));
+        self.scanline_list.push(y);
     }
 
     /// Pop the next scanline y-value
@@ -450,9 +449,9 @@ impl ClipperBase {
         if self.scanline_list.is_empty() {
             return None;
         }
-        let y = self.scanline_list.pop().unwrap().0;
+        let y = self.scanline_list.pop().unwrap();
         // Skip duplicates
-        while !self.scanline_list.is_empty() && self.scanline_list.peek().unwrap().0 == y {
+        while !self.scanline_list.is_empty() && *self.scanline_list.peek().unwrap() == y {
             self.scanline_list.pop();
         }
         Some(y)

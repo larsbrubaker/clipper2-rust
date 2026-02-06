@@ -110,24 +110,30 @@ fn test_minkowski_diff_empty_path() {
 
 #[test]
 fn test_minkowski_sum_square_with_square_closed() {
-    // Minkowski sum of a square [-10,-10 to 10,10] with a square [-50,-50 to 50,50]
-    // should produce a square [-60,-60 to 60,60] (approximately, after union)
+    // Minkowski sum of a square [-10,-10 to 10,10] with a square [-50,-50 to 50,50].
+    //
+    // The quad-based Minkowski algorithm produces degenerate (zero-area) quads when
+    // pattern and path edges are parallel. For axis-aligned squares, 8 of 16 quads
+    // degenerate, leaving the center uncovered. The union of non-degenerate quads
+    // produces a frame: outer boundary [-60,-60 to 60,60] with a hole [-40,-40 to 40,40].
+    // This matches the C++ Clipper2 behavior (identical algorithm).
     let pattern = make_square(10);
     let path = make_square(50);
     let result = minkowski_sum(&pattern, &path, true);
 
-    // Result should be non-empty
     assert!(!result.is_empty(), "Result should not be empty");
 
-    // The total area should be approximately (60*2)^2 = 14400
+    // Outer boundary is [-60,-60] to [60,60] (area 14400)
+    // Inner hole is [-40,-40] to [40,40] (area 6400)
+    // Net area = 14400 - 6400 = 8000
     let total_area = area_paths(&result).abs();
     assert!(
-        (total_area - 14400.0).abs() < 100.0,
-        "Area should be approximately 14400, got {}",
+        (total_area - 8000.0).abs() < 200.0,
+        "Area should be approximately 8000 (frame shape), got {}",
         total_area
     );
 
-    // The bounds should be approximately [-60, -60] to [60, 60]
+    // The outer bounds should still be [-60, -60] to [60, 60]
     let bounds = get_bounds_paths(&result);
     assert!(
         bounds.left >= -61 && bounds.left <= -59,
@@ -664,7 +670,12 @@ fn test_union_paths_via_minkowski_produces_clean_output() {
 
 #[test]
 fn test_minkowski_sum_many_sided_polygon() {
-    // Create an octagon-like pattern
+    // Create an octagon-like pattern with a square path.
+    //
+    // Similar to the square+square case: the quad-based algorithm produces a frame
+    // shape because quads only cover the edge bands, not the center. The outer
+    // boundary approximates the true Minkowski sum, but the center has a hole.
+    // This matches C++ Clipper2 behavior (identical algorithm).
     let pattern = vec![
         Point64::new(10, 0),
         Point64::new(7, 7),
@@ -680,10 +691,18 @@ fn test_minkowski_sum_many_sided_polygon() {
 
     assert!(!result.is_empty());
     let total_area = area_paths(&result).abs();
-    // Area should be larger than the original square (100*100 = 10000)
+    // The outer boundary (~14280) minus the inner hole (~6400) gives ~7880
     assert!(
-        total_area > 10000.0,
-        "Inflated area should be > original square area"
+        total_area > 5000.0,
+        "Frame area should be > 5000, got {}",
+        total_area
+    );
+    // Verify the outer boundary is larger than the original square
+    let outer_area = result.iter().map(|p| area(p)).filter(|a| *a > 0.0).sum::<f64>();
+    assert!(
+        outer_area > 10000.0,
+        "Outer boundary area should be > original square area, got {}",
+        outer_area
     );
 }
 
@@ -718,69 +737,25 @@ fn test_minkowski_sum_d_high_decimal_places() {
 }
 
 #[test]
-fn test_debug_square_with_square() {
-    // Diagnostic test to understand why the Minkowski sum of two axis-aligned squares
-    // produces area 6400 instead of the expected 14400.
-    //
-    // pattern: square [-10,-10] to [10,10] (half_size=10)
-    // path:    square [-50,-50] to [50,50] (half_size=50)
-    // Expected result: square [-60,-60] to [60,60] => area = 120*120 = 14400
-
+fn test_minkowski_internal_axis_aligned_squares_produce_degenerate_quads() {
+    // For axis-aligned squares, the quad-based Minkowski algorithm produces 16 quads:
+    // 8 non-degenerate (area = 2000 each) and 8 degenerate (area = 0, all points collinear).
+    // The degenerate quads arise from parallel edges in pattern and path.
     let pattern = make_square(10);
     let path = make_square(50);
-
-    // Step 1: Call minkowski_internal directly to inspect the raw quads
     let quads = minkowski_internal(&pattern, &path, true, true);
 
-    eprintln!("=== DEBUG: minkowski_internal output ===");
-    eprintln!("Number of quads: {}", quads.len());
+    assert_eq!(quads.len(), 16);
+    let non_degenerate: Vec<_> = quads.iter().filter(|q| area(q).abs() > 0.0).collect();
+    let degenerate: Vec<_> = quads.iter().filter(|q| area(q).abs() == 0.0).collect();
+    assert_eq!(non_degenerate.len(), 8);
+    assert_eq!(degenerate.len(), 8);
 
-    let mut total_quad_area = 0.0;
-    for (i, quad) in quads.iter().enumerate() {
-        let a = area(quad);
-        eprintln!(
-            "  Quad {}: {} vertices, area = {:.1} (signed), vertices = {:?}",
-            i,
-            quad.len(),
-            a,
-            quad
-        );
-        total_quad_area += a;
-    }
-    eprintln!("Total signed quad area: {:.1}", total_quad_area);
-    eprintln!("Total absolute quad area: {:.1}", total_quad_area.abs());
-
-    // Step 2: Run the union on the quads
+    // Union of the quads produces a frame shape (outer boundary with hole)
     let result = union_paths(&quads, FillRule::NonZero);
-
-    eprintln!("\n=== DEBUG: union_paths output ===");
-    eprintln!("Number of result paths: {}", result.len());
-
-    let mut total_result_area = 0.0;
-    for (i, p) in result.iter().enumerate() {
-        let a = area(p);
-        let bounds = if !p.is_empty() {
-            let b = get_bounds_paths(&vec![p.clone()]);
-            format!("[({}, {}) to ({}, {})]", b.left, b.top, b.right, b.bottom)
-        } else {
-            "empty".to_string()
-        };
-        eprintln!(
-            "  Path {}: {} vertices, area = {:.1} (signed), bounds = {}",
-            i,
-            p.len(),
-            a,
-            bounds
-        );
-        total_result_area += a;
-    }
-
-    let total_abs_area = area_paths(&result).abs();
-    eprintln!(
-        "\nTotal signed area (sum of path areas): {:.1}",
-        total_result_area
-    );
-    eprintln!("Total area via area_paths (abs): {:.1}", total_abs_area);
-    eprintln!("Expected area: 14400.0  (120 x 120)");
-    eprintln!("=== END DEBUG ===");
+    assert_eq!(result.len(), 2, "Should produce outer boundary + hole");
+    let outer_area = result.iter().map(|p| area(p)).filter(|a| *a > 0.0).sum::<f64>();
+    let hole_area = result.iter().map(|p| area(p)).filter(|a| *a < 0.0).sum::<f64>().abs();
+    assert!((outer_area - 14400.0).abs() < 100.0);
+    assert!((hole_area - 6400.0).abs() < 100.0);
 }

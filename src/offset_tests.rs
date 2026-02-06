@@ -174,14 +174,6 @@ fn test_offset_square_inflate_miter() {
 #[test]
 fn test_offset_square_shrink_miter() {
     // Shrinking a square should produce a smaller square-like shape.
-    // Note: For negative delta (shrinking), the offset produces a self-intersecting
-    // polygon with concavity-handling notches, which relies on the Clipper64 union
-    // with FillRule::Positive to clean up. This is the same approach as C++.
-    //
-    // Currently the Clipper64 engine has a limitation with FillRule::Positive on
-    // certain self-intersecting polygons, so the shrink union step may produce
-    // unexpected results. We verify the raw offset computation is correct by
-    // checking that the offset step itself produces valid output.
     let mut co = ClipperOffset::new_default();
     let square = make_square(100);
     co.add_path(&square, JoinType::Miter, EndType::Polygon);
@@ -189,20 +181,18 @@ fn test_offset_square_shrink_miter() {
     let mut result = Paths64::new();
     co.execute(-10.0, &mut result);
 
-    // Due to engine FillRule::Positive limitation with self-intersecting polygons,
-    // the result may be empty. This will be fixed when the engine's union handling
-    // is improved. For now, just verify the offset doesn't panic or produce
-    // garbage. When the engine is fixed, this test should verify non-empty result.
-    if !result.is_empty() {
-        let original_area = area(&square).abs();
-        let result_area: f64 = result.iter().map(|p| area(p).abs()).sum();
-        assert!(
-            result_area < original_area,
-            "Shrunk area {} should be < original area {}",
-            result_area,
-            original_area
-        );
-    }
+    assert!(
+        !result.is_empty(),
+        "Shrinking a square by 10 should produce a non-empty result"
+    );
+    let original_area = area(&square).abs();
+    let result_area: f64 = result.iter().map(|p| area(p).abs()).sum();
+    assert!(
+        result_area < original_area,
+        "Shrunk area {} should be < original area {}",
+        result_area,
+        original_area
+    );
 }
 
 #[test]
