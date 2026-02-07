@@ -4,7 +4,9 @@ let wasmModule: any = null;
 
 export async function initWasm(): Promise<void> {
   if (wasmModule) return;
-  const mod = await import('/public/pkg/clipper2_wasm.js' as any);
+  // Resolve relative to page URL (works in both dev server and static deployment)
+  const wasmUrl = new URL('./public/pkg/clipper2_wasm.js', window.location.href).href;
+  const mod = await import(wasmUrl);
   await mod.default();
   wasmModule = mod;
 }

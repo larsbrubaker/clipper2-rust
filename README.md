@@ -4,6 +4,15 @@ A Polygon <a href="https://en.wikipedia.org/wiki/Clipping_(computer_graphics)">C
 
 [![License](https://img.shields.io/badge/License-Boost_1.0-lightblue.svg)](https://www.boost.org/LICENSE_1_0.txt)
 [![documentation](https://user-images.githubusercontent.com/5280692/187832279-b2a43890-da80-4888-95fe-793f092be372.svg)](https://www.angusj.com/clipper2/Docs/Overview.htm)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Interactive-blue)](https://larsbrubaker.github.io/clipper2-rust/)
+
+## Interactive Demo
+
+**[Try it in your browser — no installation required](https://larsbrubaker.github.io/clipper2-rust/)**
+
+[![Demo Screenshot](docs/demo-screenshot.png)](https://larsbrubaker.github.io/clipper2-rust/)
+
+8 interactive pages running entirely via WebAssembly: boolean operations, fill rules, path offsetting, rectangle clipping, Minkowski operations, path simplification, PolyTree visualization, and utilities. All shapes are draggable for real-time exploration.
 
 ## Status: Complete
 

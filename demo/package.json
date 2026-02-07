@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "bun run server.ts",
-    "build:wasm": "powershell -File build-wasm.ps1"
+    "build:wasm": "powershell -File build-wasm.ps1",
+    "build": "bun run build.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
