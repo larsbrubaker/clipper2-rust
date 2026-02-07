@@ -100,8 +100,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
-name = "clipper2"
-version = "0.1.0"
+name = "clipper2-rust"
+version = "1.0.0"
 dependencies = [
  "criterion",
  "num-traits",
@@ -112,7 +112,7 @@ dependencies = [
 name = "clipper2-wasm"
 version = "0.1.0"
 dependencies = [
- "clipper2",
+ "clipper2-rust",
  "wasm-bindgen",
 ]
 

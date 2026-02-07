@@ -1,19 +1,34 @@
-//! # Clipper2 - High-performance 2D polygon clipping library
+//! # clipper2-rust
 //!
-//! This is a complete Rust port of the Clipper2 C++ library by Angus Johnson.
+//! A pure Rust port of the [Clipper2](https://github.com/AngusJohnson/Clipper2) polygon
+//! clipping and offsetting library by Angus Johnson.
 //!
-//! ## Implementation Status
+//! ## Features
 //!
-//! Following STRICT implementation rules:
-//! - NO stubs or todo macros allowed
-//! - Functions implemented only when all dependencies are ready
-//! - Each function must have comprehensive tests
-//! - Exact behavioral matching with C++ implementation
+//! - **Boolean operations**: Intersection, Union, Difference, and XOR on polygons
+//! - **Polygon offsetting**: Inflate/deflate with Miter, Square, Bevel, and Round joins
+//! - **Rectangle clipping**: High-performance rectangular clipping
+//! - **Minkowski sum/difference**: Geometric Minkowski operations
+//! - **Path simplification**: Ramer-Douglas-Peucker and Clipper2's simplification
+//! - **PolyTree**: Hierarchical parent/child/hole polygon representation
+//! - **Dual precision**: Integer (`i64`) and floating-point (`f64`) coordinate support
 //!
-//! Total items to implement: 857 (790 functions + 56 classes + 11 enums)
+//! ## Quick Start
+//!
+//! ```rust
+//! use clipper2_rust::core::FillRule;
+//!
+//! let subject = vec![clipper2_rust::make_path64(&[100, 100, 300, 100, 300, 300, 100, 300])];
+//! let clip = vec![clipper2_rust::make_path64(&[200, 200, 400, 200, 400, 400, 200, 400])];
+//!
+//! let result = clipper2_rust::intersect_64(&subject, &clip, FillRule::NonZero);
+//! ```
+//!
+//! ## Coordinate Systems
+//!
+//! - [`Path64`] / [`Paths64`]: Integer coordinates (`i64`) — recommended for precision
+//! - [`PathD`] / [`PathsD`]: Floating-point coordinates (`f64`) — convenient for external data
 
-// Module structure mirrors C++ header organization
-// Following STRICT RULES - only include implemented modules
 pub mod core;
 pub mod engine;
 pub mod engine_fns;
@@ -26,10 +41,6 @@ pub mod minkowski;
 pub mod offset;
 pub mod utils;
 
-// Future modules to implement in dependency order (NO STUBS ALLOWED):
-// pub mod export;   // clipper.export.h - Export utilities
-
-// Re-export implemented types and functions only
 pub use clipper::*;
 pub use core::*;
 pub use engine::*;

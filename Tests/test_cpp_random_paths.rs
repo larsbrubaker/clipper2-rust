@@ -4,9 +4,9 @@
 // Tests that Paths64-based solutions match PolyTree-based solutions
 // for randomly generated paths with deterministic seeding.
 
-use clipper2::core::*;
-use clipper2::engine::ClipType;
-use clipper2::engine_public::*;
+use clipper2_rust::core::*;
+use clipper2_rust::engine::ClipType;
+use clipper2_rust::engine_public::*;
 
 /// Simple PRNG based on minstd_rand0 (matching C++ std::default_random_engine on MSVC).
 /// Uses a linear congruential generator for deterministic results.
@@ -107,7 +107,7 @@ fn test_random_paths() {
             c.add_clip(&clip);
             c.execute_tree(ct, fr, &mut solution_polytree, &mut solution_polytree_open);
         }
-        let solution_polytree_paths = clipper2::poly_tree_to_paths64(&solution_polytree);
+        let solution_polytree_paths = clipper2_rust::poly_tree_to_paths64(&solution_polytree);
         let area_pt = area_paths(&solution_polytree_paths) as i64;
 
         assert_eq!(

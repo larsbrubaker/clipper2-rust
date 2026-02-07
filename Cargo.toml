@@ -2,17 +2,23 @@
 members = [".", "demo/wasm"]
 
 [package]
-name = "clipper2"
-version = "0.1.0"
+name = "clipper2-rust"
+version = "1.0.0"
 edition = "2021"
-description = "High-performance 2D polygon clipping library - Rust port of Clipper2"
+rust-version = "1.70"
+authors = ["Lars Brubaker <larsbrubaker@matterhackers.com>"]
+description = "Pure Rust port of the Clipper2 polygon clipping and offsetting library"
 license = "BSL-1.0"
-repository = "https://github.com/AngusJohnson/Clipper2"
-keywords = ["polygon", "clipping", "geometry", "computational-geometry", "2d"]
+repository = "https://github.com/larsbrubaker/clipper2-rust"
+homepage = "https://larsbrubaker.github.io/clipper2-rust/"
+documentation = "https://docs.rs/clipper2-rust/"
+readme = "README.md"
+keywords = ["polygon", "clipping", "geometry", "offsetting", "2d"]
 categories = ["algorithms", "graphics", "mathematics"]
+exclude = ["demo/", "docs/", "Tests/", ".github/", ".claude/", "benches/", "scripts/", "CLAUDE.md", "nul"]
 
 [lib]
-name = "clipper2"
+name = "clipper2_rust"
 path = "src/lib.rs"
 
 [dependencies]

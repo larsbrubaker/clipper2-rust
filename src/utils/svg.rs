@@ -150,8 +150,8 @@ impl Default for CoordsStyle {
 /// # Examples
 ///
 /// ```
-/// use clipper2::utils::svg::SvgWriter;
-/// use clipper2::core::FillRule;
+/// use clipper2_rust::utils::svg::SvgWriter;
+/// use clipper2_rust::core::FillRule;
 ///
 /// let mut svg = SvgWriter::new(0);
 /// // svg.add_paths_64(&paths, false, FillRule::NonZero, 0x1800009C, 0xFFB3B3DA, 0.8, false);

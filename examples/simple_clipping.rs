@@ -1,19 +1,19 @@
 // Port of CPP/Examples/SimpleClipping/SimpleClipping.cpp
 // Demonstrates basic boolean intersection of two star polygons with SVG output.
 
-use clipper2::core::FillRule;
-use clipper2::utils::svg::{svg_add_clip_64, svg_add_solution_64, svg_add_subject_64, SvgWriter};
+use clipper2_rust::core::FillRule;
+use clipper2_rust::utils::svg::{svg_add_clip_64, svg_add_solution_64, svg_add_subject_64, SvgWriter};
 
 fn main() {
     // Intersect a star and another modestly rotated star
-    let subject = vec![clipper2::make_path64(&[
+    let subject = vec![clipper2_rust::make_path64(&[
         200, 100, 20, 158, 130, 4, 130, 196, 20, 42,
     ])];
-    let clip = vec![clipper2::make_path64(&[
+    let clip = vec![clipper2_rust::make_path64(&[
         196, 126, 8, 136, 154, 16, 104, 200, 38, 24,
     ])];
 
-    let solution = clipper2::intersect_64(&subject, &clip, FillRule::NonZero);
+    let solution = clipper2_rust::intersect_64(&subject, &clip, FillRule::NonZero);
 
     println!(
         "Intersect: {} subject paths, {} clip paths -> {} solution paths",

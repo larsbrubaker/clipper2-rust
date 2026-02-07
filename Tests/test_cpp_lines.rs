@@ -3,9 +3,9 @@
 //
 // Tests line clipping operations from the Lines.txt test data file.
 
-use clipper2::core::*;
-use clipper2::engine_public::*;
-use clipper2::utils::file_io;
+use clipper2_rust::core::*;
+use clipper2_rust::engine_public::*;
+use clipper2_rust::utils::file_io;
 
 fn test_data_path(name: &str) -> String {
     format!("{}/Tests/data/{}", env!("CARGO_MANIFEST_DIR"), name)

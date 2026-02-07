@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 /// # Examples
 ///
 /// ```
-/// use clipper2::utils::timer::Timer;
+/// use clipper2_rust::utils::timer::Timer;
 /// let timer = Timer::new(false);
 /// // ... do work ...
 /// let elapsed = timer.elapsed();

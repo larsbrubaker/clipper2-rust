@@ -3,8 +3,8 @@
 //
 // These are integration tests matching the original GoogleTest suite.
 
-use clipper2::core::*;
-use clipper2::offset::*;
+use clipper2_rust::core::*;
+use clipper2_rust::offset::*;
 
 // ==========================================================================
 // From TestOffsetOrientation.cpp
@@ -12,9 +12,9 @@ use clipper2::offset::*;
 
 #[test]
 fn test_offsetting_orientation1() {
-    let subject = vec![clipper2::make_path64(&[0, 0, 0, 5, 5, 5, 5, 0])];
+    let subject = vec![clipper2_rust::make_path64(&[0, 0, 0, 5, 5, 5, 5, 0])];
     let solution =
-        clipper2::inflate_paths_64(&subject, 1.0, JoinType::Round, EndType::Polygon, 2.0, 0.0);
+        clipper2_rust::inflate_paths_64(&subject, 1.0, JoinType::Round, EndType::Polygon, 2.0, 0.0);
     assert_eq!(solution.len(), 1);
     // Output orientation should match input
     assert_eq!(is_positive(&subject[0]), is_positive(&solution[0]));
@@ -23,8 +23,8 @@ fn test_offsetting_orientation1() {
 #[test]
 fn test_offsetting_orientation2() {
     let subject = vec![
-        clipper2::make_path64(&[20, 220, 280, 220, 280, 280, 20, 280]),
-        clipper2::make_path64(&[0, 200, 0, 300, 300, 300, 300, 200]),
+        clipper2_rust::make_path64(&[20, 220, 280, 220, 280, 280, 20, 280]),
+        clipper2_rust::make_path64(&[0, 200, 0, 300, 300, 300, 300, 200]),
     ];
     let mut co = ClipperOffset::new(2.0, 0.0, false, true); // reverse_solution=true
     co.add_paths(&subject, JoinType::Round, EndType::Polygon);
@@ -44,7 +44,7 @@ fn test_offsets2_issue_448_456() {
     let scale = 10.0;
     let delta = 10.0 * scale;
     let arc_tol = 0.25 * scale;
-    let subject_raw = vec![clipper2::make_path64(&[
+    let subject_raw = vec![clipper2_rust::make_path64(&[
         50, 50, 100, 50, 100, 150, 50, 150, 0, 100,
     ])];
     let mut err = 0;
@@ -72,7 +72,7 @@ fn test_offsets4_issue_482() {
         Point64::new(0, 50000),
         Point64::new(0, 0),
     ]];
-    let solution = clipper2::inflate_paths_64(
+    let solution = clipper2_rust::inflate_paths_64(
         &paths,
         -5000.0,
         JoinType::Square,
@@ -90,7 +90,7 @@ fn test_offsets4_issue_482() {
         Point64::new(0, 50000),
         Point64::new(0, 0),
     ]];
-    let solution = clipper2::inflate_paths_64(
+    let solution = clipper2_rust::inflate_paths_64(
         &paths,
         -5000.0,
         JoinType::Square,
@@ -108,7 +108,7 @@ fn test_offsets4_issue_482() {
         Point64::new(0, 50000),
         Point64::new(0, 0),
     ]];
-    let solution = clipper2::inflate_paths_64(
+    let solution = clipper2_rust::inflate_paths_64(
         &paths,
         -5000.0,
         JoinType::Round,
@@ -126,7 +126,7 @@ fn test_offsets4_issue_482() {
         Point64::new(0, 50000),
         Point64::new(0, 0),
     ]];
-    let solution = clipper2::inflate_paths_64(
+    let solution = clipper2_rust::inflate_paths_64(
         &paths,
         -5000.0,
         JoinType::Round,
@@ -144,22 +144,22 @@ fn test_offsets4_issue_482() {
 #[test]
 fn test_offsets7_issue_593_715() {
     // Shrink 100x100 square by 50 -> should disappear
-    let mut subject = vec![clipper2::make_path64(&[0, 0, 100, 0, 100, 100, 0, 100])];
+    let mut subject = vec![clipper2_rust::make_path64(&[0, 0, 100, 0, 100, 100, 0, 100])];
     let solution =
-        clipper2::inflate_paths_64(&subject, -50.0, JoinType::Miter, EndType::Polygon, 2.0, 0.0);
+        clipper2_rust::inflate_paths_64(&subject, -50.0, JoinType::Miter, EndType::Polygon, 2.0, 0.0);
     assert_eq!(solution.len(), 0);
 
     // Square with hole, inflated by 10 -> should merge to 1 path
-    subject.push(clipper2::make_path64(&[40, 60, 60, 60, 60, 40, 40, 40]));
+    subject.push(clipper2_rust::make_path64(&[40, 60, 60, 60, 60, 40, 40, 40]));
     let solution =
-        clipper2::inflate_paths_64(&subject, 10.0, JoinType::Miter, EndType::Polygon, 2.0, 0.0);
+        clipper2_rust::inflate_paths_64(&subject, 10.0, JoinType::Miter, EndType::Polygon, 2.0, 0.0);
     assert_eq!(solution.len(), 1);
 
     // Reverse both paths, inflate by 10 -> should still be 1
     let mut reversed_subject = subject.clone();
     reversed_subject[0].reverse();
     reversed_subject[1].reverse();
-    let solution = clipper2::inflate_paths_64(
+    let solution = clipper2_rust::inflate_paths_64(
         &reversed_subject,
         10.0,
         JoinType::Miter,
@@ -171,7 +171,7 @@ fn test_offsets7_issue_593_715() {
 
     // Just the reversed outer, shrink by 50 -> should disappear
     let single_reversed = vec![reversed_subject[0].clone()];
-    let solution = clipper2::inflate_paths_64(
+    let solution = clipper2_rust::inflate_paths_64(
         &single_reversed,
         -50.0,
         JoinType::Miter,
@@ -189,18 +189,18 @@ fn test_offsets7_issue_593_715() {
 #[test]
 fn test_offsets9_issue_733() {
     // Positive orientation subject
-    let subject = vec![clipper2::make_path64(&[
+    let subject = vec![clipper2_rust::make_path64(&[
         100, 100, 200, 100, 200, 400, 100, 400,
     ])];
     let solution =
-        clipper2::inflate_paths_64(&subject, 50.0, JoinType::Miter, EndType::Polygon, 2.0, 0.0);
+        clipper2_rust::inflate_paths_64(&subject, 50.0, JoinType::Miter, EndType::Polygon, 2.0, 0.0);
     assert_eq!(solution.len(), 1);
     assert!(is_positive(&solution[0]));
 
     // Reverse subject -> solution should also be reversed, but area still larger
     let mut rev_subject = subject.clone();
     rev_subject[0].reverse();
-    let solution = clipper2::inflate_paths_64(
+    let solution = clipper2_rust::inflate_paths_64(
         &rev_subject,
         50.0,
         JoinType::Miter,
@@ -223,10 +223,10 @@ fn test_offsets9_issue_733() {
 
     // Add a hole (reverse orientation to outer)
     let mut subject_with_hole = rev_subject.clone();
-    subject_with_hole.push(clipper2::make_path64(&[
+    subject_with_hole.push(clipper2_rust::make_path64(&[
         130, 130, 170, 130, 170, 370, 130, 370,
     ]));
-    let solution = clipper2::inflate_paths_64(
+    let solution = clipper2_rust::inflate_paths_64(
         &subject_with_hole,
         30.0,
         JoinType::Miter,
@@ -246,7 +246,7 @@ fn test_offsets9_issue_733() {
     assert!(is_positive(&solution[0]));
 
     // Shrink holed subject by 15 -> should disappear
-    let solution = clipper2::inflate_paths_64(
+    let solution = clipper2_rust::inflate_paths_64(
         &subject_with_hole,
         -15.0,
         JoinType::Miter,
@@ -263,10 +263,10 @@ fn test_offsets9_issue_733() {
 
 #[test]
 fn test_offsets11_issue_405() {
-    let subject: Vec<Vec<PointD>> = vec![clipper2::make_path_d(&[
+    let subject: Vec<Vec<PointD>> = vec![clipper2_rust::make_path_d(&[
         -1.0, -1.0, -1.0, 11.0, 11.0, 11.0, 11.0, -1.0,
     ])];
-    let solution = clipper2::inflate_paths_d(
+    let solution = clipper2_rust::inflate_paths_d(
         &subject,
         -50.0,
         JoinType::Miter,
@@ -284,10 +284,10 @@ fn test_offsets11_issue_405() {
 
 #[test]
 fn test_offsets12_issue_873() {
-    let subject = vec![clipper2::make_path64(&[
+    let subject = vec![clipper2_rust::make_path64(&[
         667680768, -36382704, 737202688, -87034880, 742581888, -86055680, 747603968, -84684800,
     ])];
-    let solution = clipper2::inflate_paths_64(
+    let solution = clipper2_rust::inflate_paths_64(
         &subject,
         -249561088.0,
         JoinType::Miter,
@@ -310,7 +310,7 @@ fn test_offsets13_issue_965() {
         Point64::new(10, 0),
     ]];
     let delta = 2.0;
-    let solution1 = clipper2::inflate_paths_64(
+    let solution1 = clipper2_rust::inflate_paths_64(
         &subject1,
         delta,
         JoinType::Miter,
@@ -326,7 +326,7 @@ fn test_offsets13_issue_965() {
         vec![Point64::new(0, 0), Point64::new(0, 10), Point64::new(10, 0)],
         vec![Point64::new(0, 20)],
     ];
-    let solution2 = clipper2::inflate_paths_64(
+    let solution2 = clipper2_rust::inflate_paths_64(
         &subject2,
         delta,
         JoinType::Miter,
@@ -346,7 +346,7 @@ fn test_offsets13_issue_965() {
 fn test_offsets_basic_from_file() {
     let path = format!("{}/Tests/data/Offsets.txt", env!("CARGO_MANIFEST_DIR"));
     for test_number in 1..=2 {
-        let data = clipper2::utils::file_io::load_test_num(&path, test_number);
+        let data = clipper2_rust::utils::file_io::load_test_num(&path, test_number);
         let data = match data {
             Some(d) => d,
             None => panic!("Failed to load Offsets.txt test {}", test_number),
@@ -438,7 +438,7 @@ fn test_offsets3_issue_424() {
         Point64::new(1596698132, 1348993024),
         Point64::new(1595775386, 1342722540),
     ]];
-    let solution = clipper2::inflate_paths_64(
+    let solution = clipper2_rust::inflate_paths_64(
         &subjects,
         -209715.0,
         JoinType::Miter,

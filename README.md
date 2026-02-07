@@ -68,40 +68,40 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-clipper2 = "0.1.0"
+clipper2-rust = "1.0"
 ```
 
 ### Boolean Operations
 
 ```rust
-use clipper2::core::FillRule;
+use clipper2_rust::core::FillRule;
 
-let subject = vec![clipper2::make_path64(&[100, 100, 300, 100, 300, 300, 100, 300])];
-let clip = vec![clipper2::make_path64(&[200, 200, 400, 200, 400, 400, 200, 400])];
+let subject = vec![clipper2_rust::make_path64(&[100, 100, 300, 100, 300, 300, 100, 300])];
+let clip = vec![clipper2_rust::make_path64(&[200, 200, 400, 200, 400, 400, 200, 400])];
 
-let intersection = clipper2::intersect_64(&subject, &clip, FillRule::NonZero);
-let union = clipper2::union_64(&subject, &clip, FillRule::NonZero);
-let difference = clipper2::difference_64(&subject, &clip, FillRule::NonZero);
-let xor = clipper2::xor_64(&subject, &clip, FillRule::NonZero);
+let intersection = clipper2_rust::intersect_64(&subject, &clip, FillRule::NonZero);
+let union = clipper2_rust::union_64(&subject, &clip, FillRule::NonZero);
+let difference = clipper2_rust::difference_64(&subject, &clip, FillRule::NonZero);
+let xor = clipper2_rust::xor_64(&subject, &clip, FillRule::NonZero);
 ```
 
 ### Polygon Offsetting
 
 ```rust
-use clipper2::offset::{JoinType, EndType};
+use clipper2_rust::offset::{JoinType, EndType};
 
-let paths = vec![clipper2::make_path64(&[0, 0, 100, 0, 100, 100, 0, 100])];
-let inflated = clipper2::inflate_paths_64(&paths, 10.0, JoinType::Round, EndType::Polygon, 2.0, 0.0);
+let paths = vec![clipper2_rust::make_path64(&[0, 0, 100, 0, 100, 100, 0, 100])];
+let inflated = clipper2_rust::inflate_paths_64(&paths, 10.0, JoinType::Round, EndType::Polygon, 2.0, 0.0);
 ```
 
 ### Rectangle Clipping
 
 ```rust
-use clipper2::core::Rect64;
+use clipper2_rust::core::Rect64;
 
 let rect = Rect64::new(100, 100, 300, 300);
-let paths = vec![clipper2::make_path64(&[50, 50, 350, 50, 350, 350, 50, 350])];
-let clipped = clipper2::rect_clip_64(&rect, &paths);
+let paths = vec![clipper2_rust::make_path64(&[50, 50, 350, 50, 350, 350, 50, 350])];
+let clipped = clipper2_rust::rect_clip_64(&rect, &paths);
 ```
 
 ## Architecture

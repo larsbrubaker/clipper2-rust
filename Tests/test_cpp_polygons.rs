@@ -4,10 +4,10 @@
 // Tests polygon clipping operations from the Polygons.txt test data file
 // (1000 test cases), plus HorzSpikes (#720) and CollinearOnMacOs (#777).
 
-use clipper2::core::*;
-use clipper2::engine::ClipType;
-use clipper2::engine_public::*;
-use clipper2::utils::file_io;
+use clipper2_rust::core::*;
+use clipper2_rust::engine::ClipType;
+use clipper2_rust::engine_public::*;
+use clipper2_rust::utils::file_io;
 
 fn test_data_path(name: &str) -> String {
     format!("{}/Tests/data/{}", env!("CARGO_MANIFEST_DIR"), name)
@@ -62,7 +62,7 @@ fn test_multiple_polygons() {
             &mut solution_polytree_open,
         );
         let measured_area_polytree = solution_polytree.area_of(0) as i64;
-        let solution_polytree_paths = clipper2::poly_tree_to_paths64(&solution_polytree);
+        let solution_polytree_paths = clipper2_rust::poly_tree_to_paths64(&solution_polytree);
         let measured_count_polytree = solution_polytree_paths.len() as i64;
 
         let stored_count = data.count;
@@ -184,8 +184,8 @@ fn test_multiple_polygons() {
 #[test]
 fn test_horz_spikes_issue_720() {
     let mut paths = vec![
-        clipper2::make_path64(&[1600, 0, 1600, 100, 2050, 100, 2050, 300, 450, 300, 450, 0]),
-        clipper2::make_path64(&[1800, 200, 1800, 100, 1600, 100, 2000, 100, 2000, 200]),
+        clipper2_rust::make_path64(&[1600, 0, 1600, 100, 2050, 100, 2050, 300, 450, 300, 450, 0]),
+        clipper2_rust::make_path64(&[1800, 200, 1800, 100, 1600, 100, 2000, 100, 2000, 200]),
     ];
     let mut c = Clipper64::new();
     c.add_subject(&paths);
@@ -200,8 +200,8 @@ fn test_horz_spikes_issue_720() {
 #[test]
 fn test_collinear_on_macos_issue_777() {
     let subject = vec![
-        clipper2::make_path64(&[0, -453054451, 0, -433253797, -455550000, 0]),
-        clipper2::make_path64(&[0, -433253797, 0, 0, -455550000, 0]),
+        clipper2_rust::make_path64(&[0, -453054451, 0, -433253797, -455550000, 0]),
+        clipper2_rust::make_path64(&[0, -433253797, 0, 0, -455550000, 0]),
     ];
     let mut clipper = Clipper64::new();
     clipper.set_preserve_collinear(false);

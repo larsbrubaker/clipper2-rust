@@ -9,5 +9,5 @@ license = "BSL-1.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-clipper2 = { path = "../.." }
+clipper2-rust = { path = "../.." }
 wasm-bindgen = "0.2"

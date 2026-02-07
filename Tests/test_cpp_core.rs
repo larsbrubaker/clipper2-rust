@@ -4,9 +4,9 @@
 //
 // These are integration tests matching the original GoogleTest suite.
 
-use clipper2::core::*;
-use clipper2::engine::ClipType;
-use clipper2::engine_public::*;
+use clipper2_rust::core::*;
+use clipper2_rust::engine::ClipType;
+use clipper2_rust::engine_public::*;
 
 // ==========================================================================
 // From TestIsCollinear.cpp - TesthiCalculation
@@ -183,11 +183,11 @@ fn test_rect_op_plus() {
 
 #[test]
 fn test_simplify_path_cpp() {
-    let input = clipper2::make_path64(&[
+    let input = clipper2_rust::make_path64(&[
         0, 0, 1, 1, 0, 20, 0, 21, 1, 40, 0, 41, 0, 60, 0, 61, 0, 80, 1, 81, 0, 100,
     ]);
-    let output = clipper2::simplify_path(&input, 2.0, false);
-    let len = clipper2::path_length(&output, false);
+    let output = clipper2_rust::simplify_path(&input, 2.0, false);
+    let len = clipper2_rust::path_length(&output, false);
     assert!((len - 100.0).abs() < 1.0, "Length was {}", len);
     assert_eq!(output.len(), 2);
 }
@@ -198,29 +198,29 @@ fn test_simplify_path_cpp() {
 
 #[test]
 fn test_trim_collinear_cpp() {
-    let input1 = clipper2::make_path64(&[
+    let input1 = clipper2_rust::make_path64(&[
         10, 10, 10, 10, 50, 10, 100, 10, 100, 100, 10, 100, 10, 10, 20, 10,
     ]);
-    let output1 = clipper2::trim_collinear_64(&input1, false);
+    let output1 = clipper2_rust::trim_collinear_64(&input1, false);
     assert_eq!(output1.len(), 4);
 
     let input2 =
-        clipper2::make_path64(&[10, 10, 10, 10, 100, 10, 100, 100, 10, 100, 10, 10, 10, 10]);
-    let output2 = clipper2::trim_collinear_64(&input2, true);
+        clipper2_rust::make_path64(&[10, 10, 10, 10, 100, 10, 100, 100, 10, 100, 10, 10, 10, 10]);
+    let output2 = clipper2_rust::trim_collinear_64(&input2, true);
     assert_eq!(output2.len(), 5);
 
-    let input3 = clipper2::make_path64(&[
+    let input3 = clipper2_rust::make_path64(&[
         10, 10, 10, 50, 10, 10, 50, 10, 50, 50, 50, 10, 70, 10, 70, 50, 70, 10, 50, 10, 100, 10,
         100, 50, 100, 10,
     ]);
-    let output3 = clipper2::trim_collinear_64(&input3, false);
+    let output3 = clipper2_rust::trim_collinear_64(&input3, false);
     assert_eq!(output3.len(), 0);
 
-    let input4 = clipper2::make_path64(&[
+    let input4 = clipper2_rust::make_path64(&[
         2, 3, 3, 4, 4, 4, 4, 5, 7, 5, 8, 4, 8, 3, 9, 3, 8, 3, 7, 3, 6, 3, 5, 3, 4, 3, 3, 3, 2, 3,
     ]);
-    let output4a = clipper2::trim_collinear_64(&input4, false);
-    let output4b = clipper2::trim_collinear_64(&output4a, false);
+    let output4a = clipper2_rust::trim_collinear_64(&input4, false);
+    let output4b = clipper2_rust::trim_collinear_64(&output4a, false);
     let area4a = area(&output4a) as i32;
     let area4b = area(&output4b) as i32;
     assert_eq!(output4a.len(), 7);
@@ -236,16 +236,16 @@ fn test_trim_collinear_cpp() {
 #[test]
 fn test_negative_orientation() {
     let subjects = vec![
-        clipper2::make_path64(&[0, 0, 0, 100, 100, 100, 100, 0]),
-        clipper2::make_path64(&[10, 10, 10, 110, 110, 110, 110, 10]),
+        clipper2_rust::make_path64(&[0, 0, 0, 100, 100, 100, 100, 0]),
+        clipper2_rust::make_path64(&[10, 10, 10, 110, 110, 110, 110, 10]),
     ];
     assert!(!is_positive(&subjects[0]));
     assert!(!is_positive(&subjects[1]));
 
-    let clips = vec![clipper2::make_path64(&[50, 50, 50, 150, 150, 150, 150, 50])];
+    let clips = vec![clipper2_rust::make_path64(&[50, 50, 50, 150, 150, 150, 150, 50])];
     assert!(!is_positive(&clips[0]));
 
-    let solution = clipper2::union_64(&subjects, &clips, FillRule::Negative);
+    let solution = clipper2_rust::union_64(&subjects, &clips, FillRule::Negative);
     assert_eq!(solution.len(), 1);
     assert_eq!(solution[0].len(), 12);
 }

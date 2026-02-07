@@ -1,8 +1,8 @@
 // Port of CPP/Examples/RectClipping/RectClipping.cpp
 // Demonstrates rectangle clipping of random ellipses.
 
-use clipper2::core::{FillRule, Point64, Rect64};
-use clipper2::utils::svg::{svg_add_clip_64, svg_add_solution_64, svg_add_subject_64, SvgWriter};
+use clipper2_rust::core::{FillRule, Point64, Rect64};
+use clipper2_rust::utils::svg::{svg_add_clip_64, svg_add_solution_64, svg_add_subject_64, SvgWriter};
 use rand::Rng;
 
 fn main() {
@@ -19,7 +19,7 @@ fn main() {
         let cy = rng.gen_range(margin..display_height - margin);
         let rx = rng.gen_range(20..80) as f64;
         let ry = rng.gen_range(20..80) as f64;
-        let ellipse = clipper2::ellipse_point64(Point64::new(cx, cy), rx, ry, 0);
+        let ellipse = clipper2_rust::ellipse_point64(Point64::new(cx, cy), rx, ry, 0);
         subject.push(ellipse);
     }
 
@@ -31,7 +31,7 @@ fn main() {
         display_height * 3 / 4,
     );
 
-    let solution = clipper2::rect_clip_64(&rect, &subject);
+    let solution = clipper2_rust::rect_clip_64(&rect, &subject);
 
     println!(
         "RectClip: {} input ellipses -> {} clipped paths",

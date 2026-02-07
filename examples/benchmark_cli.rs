@@ -1,9 +1,9 @@
 // Port of CPP/Examples/Benchmarks/Benchmarks.cpp
 // CLI benchmark: times boolean intersection of random polygons with increasing edge counts.
 
-use clipper2::core::{FillRule, Path64, Point64};
-use clipper2::engine::ClipType;
-use clipper2::utils::svg::{svg_add_clip_64, svg_add_solution_64, svg_add_subject_64, SvgWriter};
+use clipper2_rust::core::{FillRule, Path64, Point64};
+use clipper2_rust::engine::ClipType;
+use clipper2_rust::utils::svg::{svg_add_clip_64, svg_add_solution_64, svg_add_subject_64, SvgWriter};
 use rand::Rng;
 use std::time::Instant;
 
@@ -38,7 +38,7 @@ fn main() {
         let clip = vec![make_random_poly(width, height, edge_cnt)];
 
         let start = Instant::now();
-        let solution = clipper2::boolean_op_64(ct, fr, &subject, &clip);
+        let solution = clipper2_rust::boolean_op_64(ct, fr, &subject, &clip);
         let elapsed = start.elapsed();
 
         if solution.is_empty() {

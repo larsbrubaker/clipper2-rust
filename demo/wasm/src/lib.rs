@@ -1,14 +1,14 @@
 use wasm_bindgen::prelude::*;
 
-use clipper2::core::{
+use clipper2_rust::core::{
     area, area_paths, ellipse_point64, get_bounds_paths, is_positive, point_in_polygon, Path64,
     Paths64, Point64, PointInPolygonResult, Rect64,
 };
-use clipper2::engine::ClipType;
-use clipper2::engine_public::{Clipper64, PolyTree64};
-use clipper2::minkowski::{minkowski_diff, minkowski_sum};
-use clipper2::offset::{EndType, JoinType};
-use clipper2::{
+use clipper2_rust::engine::ClipType;
+use clipper2_rust::engine_public::{Clipper64, PolyTree64};
+use clipper2_rust::minkowski::{minkowski_diff, minkowski_sum};
+use clipper2_rust::offset::{EndType, JoinType};
+use clipper2_rust::{
     boolean_op_64, inflate_paths_64, ramer_douglas_peucker, rect_clip_64,
     rect_clip_lines_64, simplify_path, FillRule,
 };
