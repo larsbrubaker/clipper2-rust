@@ -57,7 +57,7 @@ Before adding instrumentation:
 1. Read the test code carefully
 2. Identify what assertion is failing
 3. Note what values were expected vs. received
-4. Cross-reference with C++ implementation in `CPP/` directory
+4. Cross-reference with the [C++ implementation](https://github.com/AngusJohnson/Clipper2)
 5. Form a hypothesis about what might be wrong
 
 ### Step 3: Add Strategic Instrumentation
@@ -125,9 +125,9 @@ Common fixes for this project:
 
 When stuck, compare execution with C++:
 
-1. Find the corresponding C++ test in `CPP/Tests/`
+1. Find the corresponding C++ test in the [Clipper2 repo](https://github.com/AngusJohnson/Clipper2)
 2. Add matching print statements in both Rust and C++ code
-3. Build and run the C++ test: `cd CPP && cmake --build build && ./build/Tests/TestRunner`
+3. Build and run the C++ test locally
 4. Run both with the same input
 5. Find the first point of divergence - that's the bug
 

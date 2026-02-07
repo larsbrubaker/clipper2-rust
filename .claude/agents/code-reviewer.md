@@ -15,7 +15,7 @@ This is **clipper2-rust**, a strict port of the Clipper2 C++ computational geome
 - Port of Clipper2 (polygon clipping, offsetting, rect-clipping, Minkowski operations)
 - Must match C++ behavior exactly — same algorithms, same precision, same edge cases
 - Uses integer coordinates (i64) and floating-point coordinates (f64)
-- C++ source in `CPP/` directory for reference
+- C++ source at [github.com/AngusJohnson/Clipper2](https://github.com/AngusJohnson/Clipper2) for reference
 
 ## When Invoked
 

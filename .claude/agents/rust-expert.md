@@ -17,7 +17,7 @@ This is **clipper2-rust**, a strict port of the Clipper2 C++ computational geome
 - Rectangle clipping (optimized rect-path intersection)
 - Minkowski sum and difference
 - Integer (i64) and floating-point (f64) coordinate support
-- C++ source in `CPP/` for reference
+- C++ source at [github.com/AngusJohnson/Clipper2](https://github.com/AngusJohnson/Clipper2) for reference
 
 ## Core Competency: C++ to Rust Porting
 

@@ -43,7 +43,7 @@ Test files are co-located with source in `src/`:
 - `src/minkowski_tests.rs` - Minkowski sum/diff tests
 - `src/clipper_tests.rs` - High-level Clipper API tests
 
-C++ reference tests are in `CPP/Tests/` and test data files in `Tests/`.
+Test data files (ported from C++ test suite) are in `Tests/data/`.
 
 ## Core Testing Principles
 

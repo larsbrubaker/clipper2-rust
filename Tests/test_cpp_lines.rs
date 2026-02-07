@@ -8,7 +8,7 @@ use clipper2::engine_public::*;
 use clipper2::utils::file_io;
 
 fn test_data_path(name: &str) -> String {
-    format!("{}/CPP/Tests/{}", env!("CARGO_MANIFEST_DIR"), name)
+    format!("{}/Tests/data/{}", env!("CARGO_MANIFEST_DIR"), name)
 }
 
 #[test]

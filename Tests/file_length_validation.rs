@@ -307,7 +307,7 @@ mod file_metrics {
         }
 
         // Check for essential directories
-        let essential_dirs = ["src", "tests", "CPP", "scripts"];
+        let essential_dirs = ["src", "tests", "examples", "benches"];
 
         for dir in essential_dirs {
             let dir_path = project_root.join(dir);

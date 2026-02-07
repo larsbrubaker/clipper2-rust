@@ -344,7 +344,7 @@ fn test_offsets13_issue_965() {
 
 #[test]
 fn test_offsets_basic_from_file() {
-    let path = format!("{}/CPP/Tests/Offsets.txt", env!("CARGO_MANIFEST_DIR"));
+    let path = format!("{}/Tests/data/Offsets.txt", env!("CARGO_MANIFEST_DIR"));
     for test_number in 1..=2 {
         let data = clipper2::utils::file_io::load_test_num(&path, test_number);
         let data = match data {

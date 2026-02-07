@@ -87,4 +87,4 @@ Before implementing any function:
 
 ## C++ Reference
 
-Original C++ source code is in the `CPP/` directory for reference during porting.
+The original C++ source code is available at [github.com/AngusJohnson/Clipper2](https://github.com/AngusJohnson/Clipper2) for reference. Test data files ported from the C++ test suite are in `Tests/data/`.
