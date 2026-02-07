@@ -52,7 +52,9 @@
       "Bash(cmd.exe /c \"C:\\\\Development\\\\clipper2-rust\\\\CPP\\\\build_holes7.bat\")",
       "Bash(cmd.exe //c build_holes7.bat)",
       "Bash(cmd.exe //c \"C:\\\\Development\\\\clipper2-rust\\\\CPP\\\\build_holes7.bat\")",
-      "Bash(/c/Development/clipper2-rust/CPP/test_holes7.exe:*)"
+      "Bash(/c/Development/clipper2-rust/CPP/test_holes7.exe:*)",
+      "Bash(cargo bench:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

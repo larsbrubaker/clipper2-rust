@@ -19,6 +19,7 @@ num-traits = "0.2"
 [dev-dependencies]
 # Testing framework
 criterion = "0.5"
+rand = "0.8"
 
 [[bench]]
 name = "clipper_bench"
