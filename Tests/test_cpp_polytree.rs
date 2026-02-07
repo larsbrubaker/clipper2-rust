@@ -137,7 +137,6 @@ fn test_polytree_union() {
 }
 
 #[test]
-#[ignore = "Polytree hierarchy building needs engine fix - all paths placed at root"]
 fn test_polytree_union2_issue_987() {
     let subject = vec![
         clipper2::make_path64(&[534, 1024, 534, -800, 1026, -800, 1026, 1024]),
@@ -190,7 +189,6 @@ fn test_polytree_union3() {
 // ==========================================================================
 
 #[test]
-#[ignore = "Polytree hierarchy building needs engine fix - children not nested properly"]
 fn test_polytree_holes3() {
     let subject = vec![clipper2::make_path64(&[
         1072, 501, 1072, 501, 1072, 539, 1072, 539, 1072, 539, 870, 539, 870, 539, 870, 539, 870,
@@ -218,7 +216,6 @@ fn test_polytree_holes3() {
 }
 
 #[test]
-#[ignore = "Polytree hierarchy building needs engine fix - children not nested properly"]
 fn test_polytree_holes4_issue_618() {
     let subject = vec![
         clipper2::make_path64(&[
@@ -244,7 +241,6 @@ fn test_polytree_holes4_issue_618() {
 }
 
 #[test]
-#[ignore = "Polytree hierarchy building needs engine fix - children not nested properly"]
 fn test_polytree_holes5() {
     let subject = vec![clipper2::make_path64(&[0, 30, 400, 30, 400, 100, 0, 100])];
     let clip = vec![
@@ -270,7 +266,6 @@ fn test_polytree_holes5() {
 }
 
 #[test]
-#[ignore = "Polytree hierarchy building needs engine fix - children not nested properly"]
 fn test_polytree_holes6_issue_618() {
     let subject = vec![
         clipper2::make_path64(&[150, 50, 200, 50, 200, 100, 150, 100]),
@@ -303,7 +298,6 @@ fn test_polytree_holes6_issue_618() {
 }
 
 #[test]
-#[ignore = "Polytree hierarchy building needs engine fix - children not nested properly"]
 fn test_polytree_holes7_issue_618() {
     let subject = vec![
         clipper2::make_path64(&[
@@ -326,7 +320,6 @@ fn test_polytree_holes7_issue_618() {
 }
 
 #[test]
-#[ignore = "Polytree hierarchy building needs engine fix - children not nested properly"]
 fn test_polytree_holes8_issue_942() {
     let subject = vec![
         clipper2::make_path64(&[1588700, -8717600, 1616200, -8474800, 1588700, -8474800]),
@@ -372,7 +365,6 @@ fn test_polytree_holes8_issue_942() {
 }
 
 #[test]
-#[ignore = "Polytree hierarchy building needs engine fix - children not nested properly"]
 fn test_polytree_holes9_issue_957() {
     let subject = vec![
         clipper2::make_path64(&[
@@ -446,7 +438,6 @@ fn test_polytree_holes9_issue_957() {
 }
 
 #[test]
-#[ignore = "Polytree hierarchy building needs engine fix - children not nested properly"]
 fn test_polytree_holes10_issue_973() {
     let subject = vec![
         clipper2::make_path64(&[0, 0, 79530, 0, 79530, 940, 0, 940, 0, 0]),

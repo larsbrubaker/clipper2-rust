@@ -48,7 +48,11 @@
       "Bash(ls:*)",
       "Bash(cmd //c:*)",
       "Bash(git stash:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(cmd.exe /c \"C:\\\\Development\\\\clipper2-rust\\\\CPP\\\\build_holes7.bat\")",
+      "Bash(cmd.exe //c build_holes7.bat)",
+      "Bash(cmd.exe //c \"C:\\\\Development\\\\clipper2-rust\\\\CPP\\\\build_holes7.bat\")",
+      "Bash(/c/Development/clipper2-rust/CPP/test_holes7.exe:*)"
     ],
     "deny": []
   }

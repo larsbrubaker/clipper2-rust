@@ -860,12 +860,14 @@ impl ClipperBase {
     /// Direct port from clipper.engine.cpp AddTrialHorzJoin
     #[inline]
     pub fn add_trial_horz_join(&mut self, op_idx: usize) {
-        if self.outpt_arena[op_idx].horz.is_some() {
+        // Match C++: check is_open, then just push to the list.
+        // Do NOT check or set op.horz here - that is only done inside
+        // convert_horz_segs_to_joins (via UpdateHorzSegment logic).
+        let or_idx = self.outpt_arena[op_idx].outrec;
+        if self.outrec_list[or_idx].is_open {
             return;
         }
-        let hs_idx = self.horz_seg_list.len();
         self.horz_seg_list.push(HorzSegment::with_op(op_idx));
-        self.outpt_arena[op_idx].horz = Some(hs_idx);
     }
 
     /// Push a horizontal edge onto the horz stack
@@ -2695,7 +2697,9 @@ impl ClipperBase {
         for i in 0..self.horz_seg_list.len() {
             let op = match self.horz_seg_list[i].left_op {
                 Some(op) => op,
-                None => continue,
+                None => {
+                    continue;
+                }
             };
             let or_idx = self.outpt_arena[op].outrec;
             let real_or = get_real_outrec(&self.outrec_list, or_idx);
@@ -2778,7 +2782,7 @@ impl ClipperBase {
             }
             let a_x = self.outpt_arena[a.left_op.unwrap()].pt.x;
             let b_x = self.outpt_arena[b.left_op.unwrap()].pt.x;
-            b_x.cmp(&a_x)
+            a_x.cmp(&b_x)
         });
 
         // Find pairs and create joins
@@ -2817,12 +2821,14 @@ impl ClipperBase {
                 let hs1_ltr = self.horz_seg_list[i].left_to_right;
 
                 if hs1_ltr {
+                    // C++ modifies hs1->left_op persistently
                     let mut lo1 = self.horz_seg_list[i].left_op.unwrap();
                     while self.outpt_arena[self.outpt_arena[lo1].next].pt.y == curr_y
                         && self.outpt_arena[self.outpt_arena[lo1].next].pt.x <= hs2_left_x
                     {
                         lo1 = self.outpt_arena[lo1].next;
                     }
+                    self.horz_seg_list[i].left_op = Some(lo1);
                     let mut lo2 = self.horz_seg_list[j].left_op.unwrap();
                     while self.outpt_arena[self.outpt_arena[lo2].prev].pt.y == curr_y
                         && self.outpt_arena[self.outpt_arena[lo2].prev].pt.x
@@ -2830,16 +2836,19 @@ impl ClipperBase {
                     {
                         lo2 = self.outpt_arena[lo2].prev;
                     }
+                    self.horz_seg_list[j].left_op = Some(lo2);
                     let dup1 = self.duplicate_op(lo1, true);
                     let dup2 = self.duplicate_op(lo2, false);
                     self.horz_join_list.push(HorzJoin::with_ops(dup1, dup2));
                 } else {
+                    // C++ modifies hs1->left_op persistently
                     let mut lo1 = self.horz_seg_list[i].left_op.unwrap();
                     while self.outpt_arena[self.outpt_arena[lo1].prev].pt.y == curr_y
                         && self.outpt_arena[self.outpt_arena[lo1].prev].pt.x <= hs2_left_x
                     {
                         lo1 = self.outpt_arena[lo1].prev;
                     }
+                    self.horz_seg_list[i].left_op = Some(lo1);
                     let mut lo2 = self.horz_seg_list[j].left_op.unwrap();
                     while self.outpt_arena[self.outpt_arena[lo2].next].pt.y == curr_y
                         && self.outpt_arena[self.outpt_arena[lo2].next].pt.x
@@ -2847,6 +2856,7 @@ impl ClipperBase {
                     {
                         lo2 = self.outpt_arena[lo2].next;
                     }
+                    self.horz_seg_list[j].left_op = Some(lo2);
                     let dup1 = self.duplicate_op(lo2, true);
                     let dup2 = self.duplicate_op(lo1, false);
                     self.horz_join_list.push(HorzJoin::with_ops(dup1, dup2));
@@ -3246,10 +3256,13 @@ impl ClipperBase {
             }
             if self.outrec_list[owner].pts.is_some() && self.check_bounds(owner) {
                 let or_bounds = self.outrec_list[outrec_idx].bounds;
-                if self.outrec_list[owner].bounds.contains_rect(&or_bounds) {
+                let owner_bounds = self.outrec_list[owner].bounds;
+                let contains = owner_bounds.contains_rect(&or_bounds);
+                if contains {
                     let or_pts = self.outrec_list[outrec_idx].pts.unwrap();
                     let owner_pts = self.outrec_list[owner].pts.unwrap();
-                    if path2_contains_path1_outpt(or_pts, owner_pts, &self.outpt_arena) {
+                    let p2cp1 = path2_contains_path1_outpt(or_pts, owner_pts, &self.outpt_arena);
+                    if p2cp1 {
                         break;
                     }
                 }
