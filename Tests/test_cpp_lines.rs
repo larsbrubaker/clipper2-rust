@@ -15,11 +15,7 @@ fn test_data_path(name: &str) -> String {
 fn test_multiple_lines() {
     let path = test_data_path("Lines.txt");
     let mut test_number = 1usize;
-    loop {
-        let data = match file_io::load_test_num(&path, test_number) {
-            Some(d) => d,
-            None => break,
-        };
+    while let Some(data) = file_io::load_test_num(&path, test_number) {
         let mut c = Clipper64::new();
         c.add_subject(&data.subj);
         c.add_open_subject(&data.subj_open);
@@ -27,7 +23,12 @@ fn test_multiple_lines() {
         let mut solution = Paths64::new();
         let mut solution_open = Paths64::new();
         assert!(
-            c.execute(data.clip_type, data.fill_rule, &mut solution, Some(&mut solution_open)),
+            c.execute(
+                data.clip_type,
+                data.fill_rule,
+                &mut solution,
+                Some(&mut solution_open)
+            ),
             "Execute failed for test {}",
             test_number
         );
@@ -43,10 +44,21 @@ fn test_multiple_lines() {
         if test_number == 1 {
             assert_eq!(solution.len(), 1, "Test 1: expected 1 solution path");
             if !solution.is_empty() {
-                assert_eq!(solution[0].len(), 6, "Test 1: solution[0] should have 6 vertices");
-                assert!(is_positive(&solution[0]), "Test 1: solution[0] should be positive");
+                assert_eq!(
+                    solution[0].len(),
+                    6,
+                    "Test 1: solution[0] should have 6 vertices"
+                );
+                assert!(
+                    is_positive(&solution[0]),
+                    "Test 1: solution[0] should be positive"
+                );
             }
-            assert_eq!(solution_open.len(), 1, "Test 1: expected 1 open solution path");
+            assert_eq!(
+                solution_open.len(),
+                1,
+                "Test 1: expected 1 open solution path"
+            );
             if !solution_open.is_empty() {
                 assert_eq!(
                     solution_open[0].len(),
@@ -55,7 +67,10 @@ fn test_multiple_lines() {
                 );
                 if !solution_open[0].is_empty() {
                     // Expect vertex closest to input path's start
-                    assert_eq!(solution_open[0][0].y, 6, "Test 1: solution_open[0][0].y should be 6");
+                    assert_eq!(
+                        solution_open[0][0].y, 6,
+                        "Test 1: solution_open[0][0].y should be 6"
+                    );
                 }
             }
         } else {

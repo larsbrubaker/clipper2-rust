@@ -742,18 +742,19 @@ impl RectClip64 {
                     if p == loc2 {
                         continue;
                     }
+                    // C++ calls AddCorner(prev, HeadingClockwise(prev, loc2))
+                    // which is the (Location&, bool) overload, not (Location, Location)
                     let hcw = heading_clockwise(p, loc2);
-                    self.add_corner_prev_curr(p, if hcw { loc2 } else { p });
-                    // Actually need the simpler version: AddCorner(prev, HeadingClockwise(prev, loc2))
-                    // Let me re-examine. C++ says: AddCorner(prev, HeadingClockwise(prev, loc2));
-                    // This calls AddCorner(Location& loc, bool isClockwise) overload
+                    self.add_corner_loc(&mut p, hcw);
                     p = loc2;
                 }
                 loc = p;
             }
             if loc != first_cross {
+                // C++ calls AddCorner(loc, HeadingClockwise(loc, first_cross_))
+                // which is the (Location&, bool) overload
                 let hcw = heading_clockwise(loc, first_cross);
-                self.add_corner_prev_curr(loc, if hcw { first_cross } else { loc });
+                self.add_corner_loc(&mut loc, hcw);
             }
         }
     }

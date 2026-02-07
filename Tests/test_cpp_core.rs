@@ -122,7 +122,12 @@ fn test_is_collinear2_issue_831() {
     clipper.add_subject(&subject);
     let mut solution = Paths64::new();
     let mut solution_open = Paths64::new();
-    clipper.execute(ClipType::Union, FillRule::EvenOdd, &mut solution, Some(&mut solution_open));
+    clipper.execute(
+        ClipType::Union,
+        FillRule::EvenOdd,
+        &mut solution,
+        Some(&mut solution_open),
+    );
     assert_eq!(solution.len(), 2);
 }
 
@@ -199,22 +204,20 @@ fn test_trim_collinear_cpp() {
     let output1 = clipper2::trim_collinear_64(&input1, false);
     assert_eq!(output1.len(), 4);
 
-    let input2 = clipper2::make_path64(&[
-        10, 10, 10, 10, 100, 10, 100, 100, 10, 100, 10, 10, 10, 10,
-    ]);
+    let input2 =
+        clipper2::make_path64(&[10, 10, 10, 10, 100, 10, 100, 100, 10, 100, 10, 10, 10, 10]);
     let output2 = clipper2::trim_collinear_64(&input2, true);
     assert_eq!(output2.len(), 5);
 
     let input3 = clipper2::make_path64(&[
-        10, 10, 10, 50, 10, 10, 50, 10, 50, 50, 50, 10, 70, 10, 70, 50, 70, 10, 50, 10, 100,
-        10, 100, 50, 100, 10,
+        10, 10, 10, 50, 10, 10, 50, 10, 50, 50, 50, 10, 70, 10, 70, 50, 70, 10, 50, 10, 100, 10,
+        100, 50, 100, 10,
     ]);
     let output3 = clipper2::trim_collinear_64(&input3, false);
     assert_eq!(output3.len(), 0);
 
     let input4 = clipper2::make_path64(&[
-        2, 3, 3, 4, 4, 4, 4, 5, 7, 5, 8, 4, 8, 3, 9, 3, 8, 3, 7, 3, 6, 3, 5, 3, 4, 3, 3, 3,
-        2, 3,
+        2, 3, 3, 4, 4, 4, 4, 5, 7, 5, 8, 4, 8, 3, 9, 3, 8, 3, 7, 3, 6, 3, 5, 3, 4, 3, 3, 3, 2, 3,
     ]);
     let output4a = clipper2::trim_collinear_64(&input4, false);
     let output4b = clipper2::trim_collinear_64(&output4a, false);
@@ -232,14 +235,14 @@ fn test_trim_collinear_cpp() {
 
 #[test]
 fn test_negative_orientation() {
-    let mut subjects = Paths64::new();
-    subjects.push(clipper2::make_path64(&[0, 0, 0, 100, 100, 100, 100, 0]));
-    subjects.push(clipper2::make_path64(&[10, 10, 10, 110, 110, 110, 110, 10]));
+    let subjects = vec![
+        clipper2::make_path64(&[0, 0, 0, 100, 100, 100, 100, 0]),
+        clipper2::make_path64(&[10, 10, 10, 110, 110, 110, 110, 10]),
+    ];
     assert!(!is_positive(&subjects[0]));
     assert!(!is_positive(&subjects[1]));
 
-    let mut clips = Paths64::new();
-    clips.push(clipper2::make_path64(&[50, 50, 50, 150, 150, 150, 150, 50]));
+    let clips = vec![clipper2::make_path64(&[50, 50, 50, 150, 150, 150, 150, 50])];
     assert!(!is_positive(&clips[0]));
 
     let solution = clipper2::union_64(&subjects, &clips, FillRule::Negative);

@@ -2460,7 +2460,7 @@ impl ClipperBase {
                     break;
                 }
 
-                let curr_base = li;
+                let mut curr_base = li;
                 let right_idx = self.active_arena[li].jump.unwrap();
                 let mut l_end = right_idx;
                 let r_end = self.active_arena[right_idx].jump;
@@ -2487,14 +2487,13 @@ impl ClipperBase {
 
                         insert1_before2_in_sel(tmp_idx, left_scan, &mut self.active_arena);
                         if left_scan == curr_base {
-                            let new_curr_base = tmp_idx;
-                            self.active_arena[new_curr_base].jump = r_end;
+                            curr_base = tmp_idx;
+                            self.active_arena[curr_base].jump = r_end;
                             if let Some(pb) = prev_base {
-                                self.active_arena[pb].jump = Some(new_curr_base);
+                                self.active_arena[pb].jump = Some(curr_base);
                             } else {
-                                self.sel = Some(new_curr_base);
+                                self.sel = Some(curr_base);
                             }
-                            // update left_inner tracking: curr_base changed
                         }
                     } else {
                         left_scan = self.active_arena[left_scan].next_in_sel.unwrap_or(NONE);

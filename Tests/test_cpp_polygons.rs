@@ -38,7 +38,12 @@ fn test_multiple_polygons() {
         c.add_clip(&data.clip);
         let mut solution = Paths64::new();
         let mut solution_open = Paths64::new();
-        c.execute(data.clip_type, data.fill_rule, &mut solution, Some(&mut solution_open));
+        c.execute(
+            data.clip_type,
+            data.fill_rule,
+            &mut solution,
+            Some(&mut solution_open),
+        );
 
         let measured_area = area_paths(&solution) as i64;
         let measured_count = (solution.len() + solution_open.len()) as i64;
@@ -63,30 +68,28 @@ fn test_multiple_polygons() {
         let stored_count = data.count;
         let stored_area = data.area;
 
-        let mut count_ok = true;
-        let mut area_ok = true;
-
         // Check polygon counts
         // Note: Exception lists are ported from C++. The Rust engine port
         // may produce minor count/area variations for some complex edge cases.
         if stored_count > 0 {
             let count_diff = (measured_count - stored_count).abs();
-            if is_in_list(
+            let count_ok = if is_in_list(
                 test_number,
-                &[120, 121, 130, 138, 140, 148, 163, 165, 166, 167, 168, 172, 173, 175, 178, 180],
+                &[
+                    120, 121, 130, 138, 140, 148, 163, 165, 166, 167, 168, 172, 173, 175, 178, 180,
+                ],
             ) {
-                count_ok = count_diff <= 5;
+                count_diff <= 5
             } else if is_in_list(test_number, &[126]) {
-                count_ok = count_diff <= 3;
-            } else if is_in_list(test_number, &[16, 27, 181]) {
-                count_ok = count_diff <= 2;
-            } else if test_number >= 120 && test_number <= 184 {
-                count_ok = count_diff <= 2;
+                count_diff <= 3
+            } else if is_in_list(test_number, &[16, 27, 181]) || (120..=184).contains(&test_number)
+            {
+                count_diff <= 2
             } else if is_in_list(test_number, &[23, 45, 87, 102, 111, 113, 191]) {
-                count_ok = count_diff <= 1;
+                count_diff <= 1
             } else {
-                count_ok = measured_count == stored_count;
-            }
+                measured_count == stored_count
+            };
             if !count_ok {
                 failures.push(format!(
                     "Test {}: count mismatch (measured={}, stored={}, diff={})",
@@ -114,7 +117,8 @@ fn test_multiple_polygons() {
             } else {
                 0.01
             };
-            area_ok = measured.abs() > 0.0 && (measured - stored).abs() <= tolerance * measured.abs();
+            let area_ok =
+                measured.abs() > 0.0 && (measured - stored).abs() <= tolerance * measured.abs();
             if !area_ok {
                 let pct = if measured.abs() > 0.0 {
                     (measured - stored).abs() / measured.abs() * 100.0
@@ -123,7 +127,11 @@ fn test_multiple_polygons() {
                 };
                 failures.push(format!(
                     "Test {}: area mismatch (measured={}, stored={}, diff={:.1}%, tol={:.1}%)",
-                    test_number, measured_area, stored_area, pct, tolerance * 100.0
+                    test_number,
+                    measured_area,
+                    stored_area,
+                    pct,
+                    tolerance * 100.0
                 ));
             }
         }
@@ -181,13 +189,8 @@ fn test_horz_spikes_issue_720() {
     ];
     let mut c = Clipper64::new();
     c.add_subject(&paths);
-    c.execute(
-        ClipType::Union,
-        FillRule::NonZero,
-        &mut paths,
-        None,
-    );
-    assert!(paths.len() >= 1);
+    c.execute(ClipType::Union, FillRule::NonZero, &mut paths, None);
+    assert!(!paths.is_empty());
 }
 
 // ==========================================================================
@@ -205,7 +208,12 @@ fn test_collinear_on_macos_issue_777() {
     clipper.add_subject(&subject);
     let mut solution = Paths64::new();
     let mut solution_open = Paths64::new();
-    clipper.execute(ClipType::Union, FillRule::NonZero, &mut solution, Some(&mut solution_open));
+    clipper.execute(
+        ClipType::Union,
+        FillRule::NonZero,
+        &mut solution,
+        Some(&mut solution_open),
+    );
     assert_eq!(solution.len(), 1);
     assert_eq!(solution[0].len(), 3);
     assert_eq!(is_positive(&subject[0]), is_positive(&solution[0]));

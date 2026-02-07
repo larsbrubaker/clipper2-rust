@@ -1034,8 +1034,9 @@ pub fn get_segment_intersect_pt(
     } else if t >= 1.0 {
         *ip = ln1b;
     } else {
-        ip.x = (ln1a.x as f64 + t * dx1).round() as i64;
-        ip.y = (ln1a.y as f64 + t * dy1).round() as i64;
+        // C++ uses static_cast<T> which truncates toward zero, not rounds
+        ip.x = (ln1a.x as f64 + t * dx1) as i64;
+        ip.y = (ln1a.y as f64 + t * dy1) as i64;
     }
 
     true

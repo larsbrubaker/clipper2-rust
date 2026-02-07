@@ -12,28 +12,38 @@ fn test_rectclip_basic() {
     let clp = vec![rect.as_path()];
 
     // Subject == rect -> solution area == subject area
-    let sub = vec![clipper2::make_path64(&[100, 100, 700, 100, 700, 500, 100, 500])];
+    let sub = vec![clipper2::make_path64(&[
+        100, 100, 700, 100, 700, 500, 100, 500,
+    ])];
     let sol = clipper2::rect_clip_64(&rect, &sub);
     assert!((area_paths(&sol) - area_paths(&sub)).abs() < 1.0);
 
     // Subject slightly inside -> solution area == subject area
-    let sub = vec![clipper2::make_path64(&[110, 110, 700, 100, 700, 500, 100, 500])];
+    let sub = vec![clipper2::make_path64(&[
+        110, 110, 700, 100, 700, 500, 100, 500,
+    ])];
     let sol = clipper2::rect_clip_64(&rect, &sub);
     assert!((area_paths(&sol) - area_paths(&sub)).abs() < 1.0);
 
     // Subject extends outside -> solution area == clip area
-    let sub = vec![clipper2::make_path64(&[90, 90, 700, 100, 700, 500, 100, 500])];
+    let sub = vec![clipper2::make_path64(&[
+        90, 90, 700, 100, 700, 500, 100, 500,
+    ])];
     let sol = clipper2::rect_clip_64(&rect, &sub);
     assert!((area_paths(&sol) - area_paths(&clp)).abs() < 1.0);
 
     // Subject fully inside rect
-    let sub = vec![clipper2::make_path64(&[110, 110, 690, 110, 690, 490, 110, 490])];
+    let sub = vec![clipper2::make_path64(&[
+        110, 110, 690, 110, 690, 490, 110, 490,
+    ])];
     let sol = clipper2::rect_clip_64(&rect, &sub);
     assert!((area_paths(&sol) - area_paths(&sub)).abs() < 1.0);
 
     // Subject touching rect edge (outside) -> empty
     let rect2 = Rect64::new(390, 290, 410, 310);
-    let sub = vec![clipper2::make_path64(&[410, 290, 500, 290, 500, 310, 410, 310])];
+    let sub = vec![clipper2::make_path64(&[
+        410, 290, 500, 290, 500, 310, 410, 310,
+    ])];
     let sol = clipper2::rect_clip_64(&rect2, &sub);
     assert!(sol.is_empty());
 
@@ -76,7 +86,14 @@ fn test_rectclip2_issue_597() {
 fn test_rectclip3_issue_637() {
     let r = Rect64::new(-1800000000, -137573171, -1741475021, 3355443);
     let subject = vec![clipper2::make_path64(&[
-        -1800000000, 10005000, -1800000000, -5000, -1789994999, -5000, -1789994999, 10005000,
+        -1800000000,
+        10005000,
+        -1800000000,
+        -5000,
+        -1789994999,
+        -5000,
+        -1789994999,
+        10005000,
     ])];
     let solution = clipper2::rect_clip_64(&r, &subject);
     assert_eq!(solution.len(), 1);

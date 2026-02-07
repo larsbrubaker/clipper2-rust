@@ -787,3 +787,70 @@ fn test_clipper64_xor_two_overlapping_squares() {
         total_area
     );
 }
+
+// ============================================================================
+// Polygon test case 37 - reproducer for count=3 bug (expected count=2)
+// ============================================================================
+
+#[test]
+fn test_polygon_case_37_difference_evenodd() {
+    // Test data extracted from CPP/Tests/Polygons.txt, test 37:
+    //   CLIPTYPE: DIFFERENCE
+    //   FILLRULE: EVENODD
+    //   SOL_AREA: 18194
+    //   SOL_COUNT: 2
+    //   SUBJECTS:
+    //     0,0, 102,0, 119,107, 0,101
+    //     116,110, 200,114, 200,200, 107,200
+    //   CLIPS:
+    //     0,108, 117,106, 111,200, 0,200
+    //     112,0, 200,0, 200,117, 101,112
+
+    let subjects = vec![
+        vec![
+            Point64::new(0, 0),
+            Point64::new(102, 0),
+            Point64::new(119, 107),
+            Point64::new(0, 101),
+        ],
+        vec![
+            Point64::new(116, 110),
+            Point64::new(200, 114),
+            Point64::new(200, 200),
+            Point64::new(107, 200),
+        ],
+    ];
+    let clips = vec![
+        vec![
+            Point64::new(0, 108),
+            Point64::new(117, 106),
+            Point64::new(111, 200),
+            Point64::new(0, 200),
+        ],
+        vec![
+            Point64::new(112, 0),
+            Point64::new(200, 0),
+            Point64::new(200, 117),
+            Point64::new(101, 112),
+        ],
+    ];
+
+    let mut c = Clipper64::new();
+    c.add_subject(&subjects);
+    c.add_clip(&clips);
+    let mut result = Paths64::new();
+    c.execute(ClipType::Difference, FillRule::EvenOdd, &mut result, None);
+
+    let measured_count = result.len();
+    assert_eq!(
+        measured_count, 2,
+        "Polygon test 37: expected 2 output paths, got {}",
+        measured_count
+    );
+    let total_area: f64 = result.iter().map(area).sum();
+    assert!(
+        (total_area as i64 - 18194).abs() < 200,
+        "Polygon test 37: expected area ~18194, got {}",
+        total_area as i64
+    );
+}

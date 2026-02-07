@@ -363,3 +363,26 @@ fn test_get_segment_intersection_parallel() {
     );
     assert!(!result);
 }
+
+#[test]
+fn test_rectclip64_triangle_touching_corner_should_be_empty() {
+    // Triangle only touches the rect at corner point (410,310) which is bottom-right
+    // rect = (390, 290, 410, 310)
+    // triangle = (430,290), (470,330), (390,330)
+    // C++ returns empty (0 paths) because the triangle is outside the rect,
+    // only touching at the corner point (410,310).
+    let rect = Rect64::new(390, 290, 410, 310);
+    let mut rc = RectClip64::new(rect);
+    let triangle = vec![
+        Point64::new(430, 290),
+        Point64::new(470, 330),
+        Point64::new(390, 330),
+    ];
+    let result = rc.execute(&vec![triangle]);
+    assert!(
+        result.is_empty(),
+        "Expected empty result for triangle that only touches rect at a corner, got {} paths: {:?}",
+        result.len(),
+        result
+    );
+}
