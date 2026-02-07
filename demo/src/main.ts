@@ -13,6 +13,7 @@ const demoModules: Record<string, () => Promise<{ init: DemoInit }>> = {
   'simplify': () => import('./demos/simplify.ts' as any),
   'polytree': () => import('./demos/polytree.ts' as any),
   'utilities': () => import('./demos/utilities.ts' as any),
+  'how-we-did-this': () => import('./demos/how-we-did-this.ts' as any),
 };
 
 let currentCleanup: (() => void) | null = null;
@@ -88,6 +89,14 @@ function renderHome(container: HTMLElement) {
           <p>Point-in-polygon testing, area calculation, bounds detection, and orientation checks.</p>
         </a>
       </div>
+      <div style="margin-top: 32px;">
+        <a href="#/how-we-did-this" class="feature-card" style="max-width: 600px; border-color: var(--accent); background: var(--accent-light);">
+          <span class="card-icon">&#128214;</span>
+          <h3>How We Ported Clipper2 to Rust</h3>
+          <p>The story of porting 10,000+ lines of C++ to Rust in 48 hours with AI assistance &mdash; the good, the bad, and the ugly.</p>
+        </a>
+      </div>
+
       <div class="about-section">
         <h2>About This Project</h2>
         <p>
