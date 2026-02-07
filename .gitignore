@@ -1,2 +1,3 @@
 /target
 *.svg
+node_modules/

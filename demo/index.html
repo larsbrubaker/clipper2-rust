@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clipper2 for Rust — Interactive Demos</title>
+  <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <h1 class="logo">Clipper2<span class="logo-accent">.rs</span></h1>
+      <p class="tagline">Interactive Polygon Clipping Demos</p>
+    </div>
+    <ul class="nav-list">
+      <li><a href="#/" class="nav-link active" data-route="home">
+        <span class="nav-icon">&#9670;</span> Home
+      </a></li>
+      <li class="nav-section">Operations</li>
+      <li><a href="#/boolean-ops" class="nav-link" data-route="boolean-ops">
+        <span class="nav-icon">&#9649;</span> Boolean Operations
+      </a></li>
+      <li><a href="#/fill-rules" class="nav-link" data-route="fill-rules">
+        <span class="nav-icon">&#9638;</span> Fill Rules
+      </a></li>
+      <li><a href="#/offset" class="nav-link" data-route="offset">
+        <span class="nav-icon">&#10562;</span> Path Offsetting
+      </a></li>
+      <li><a href="#/rect-clip" class="nav-link" data-route="rect-clip">
+        <span class="nav-icon">&#9634;</span> Rectangle Clipping
+      </a></li>
+      <li class="nav-section">Advanced</li>
+      <li><a href="#/minkowski" class="nav-link" data-route="minkowski">
+        <span class="nav-icon">&#10753;</span> Minkowski Ops
+      </a></li>
+      <li><a href="#/simplify" class="nav-link" data-route="simplify">
+        <span class="nav-icon">&#10140;</span> Path Simplification
+      </a></li>
+      <li><a href="#/polytree" class="nav-link" data-route="polytree">
+        <span class="nav-icon">&#9776;</span> PolyTree
+      </a></li>
+      <li><a href="#/utilities" class="nav-link" data-route="utilities">
+        <span class="nav-icon">&#9881;</span> Utilities
+      </a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <p><a href="https://github.com/larsbrubaker/clipper2-rust" target="_blank">Source on GitHub</a></p>
+      <p>Rust port of <a href="https://github.com/AngusJohnson/Clipper2" target="_blank">Clipper2</a></p>
+      <p class="license">BSL-1.0 License</p>
+    </div>
+  </nav>
+
+  <main id="main-content">
+    <!-- Content dynamically injected by router -->
+  </main>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

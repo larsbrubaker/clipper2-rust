@@ -1,0 +1,13 @@
+[package]
+name = "clipper2-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "WASM bindings for the Clipper2 Rust polygon clipping library"
+license = "BSL-1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clipper2 = { path = "../.." }
+wasm-bindgen = "0.2"

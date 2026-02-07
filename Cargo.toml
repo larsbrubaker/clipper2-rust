@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "demo/wasm"]
+
 [package]
 name = "clipper2"
 version = "0.1.0"

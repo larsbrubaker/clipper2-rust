@@ -55,7 +55,20 @@
       "Bash(/c/Development/clipper2-rust/CPP/test_holes7.exe:*)",
       "Bash(cargo bench:*)",
       "Bash(git add:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(rustup target list:*)",
+      "Bash(where:*)",
+      "Bash(rustup target add:*)",
+      "Bash(cargo install:*)",
+      "Bash(wasm-pack build:*)",
+      "Bash(bun install:*)",
+      "Bash(bun run:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(PORT=3001 bun run:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:localhost)"
     ],
     "deny": []
   }
