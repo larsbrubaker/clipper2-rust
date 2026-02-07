@@ -2,8 +2,9 @@
 
 A Polygon <a href="https://en.wikipedia.org/wiki/Clipping_(computer_graphics)">Clipping</a> and <a href="https://en.wikipedia.org/wiki/Parallel_curve">Offsetting</a> library — a complete, pure Rust port of the [Clipper2 C++ library](https://github.com/AngusJohnson/Clipper2) by [Angus Johnson](https://www.angusj.com).
 
+[![crates.io](https://img.shields.io/crates/v/clipper2-rust.svg)](https://crates.io/crates/clipper2-rust)
+[![docs.rs](https://docs.rs/clipper2-rust/badge.svg)](https://docs.rs/clipper2-rust)
 [![License](https://img.shields.io/badge/License-Boost_1.0-lightblue.svg)](https://www.boost.org/LICENSE_1_0.txt)
-[![documentation](https://user-images.githubusercontent.com/5280692/187832279-b2a43890-da80-4888-95fe-793f092be372.svg)](https://www.angusj.com/clipper2/Docs/Overview.htm)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Interactive-blue)](https://larsbrubaker.github.io/clipper2-rust/)
 
 ## Interactive Demo
