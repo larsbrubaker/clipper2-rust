@@ -42,7 +42,7 @@ This port was created by [MatterHackers](https://www.matterhackers.com) using [C
 - **Multiple Precision**: Integer (`i64`) and floating-point (`f64`) coordinate support
 - **PolyTree Structure**: Hierarchical representation of polygon parent/child/hole relationships
 - **SVG Output**: Built-in SVG writer for visualization and debugging
-- **Memory Safe**: All the benefits of Rust's ownership system with zero-cost abstractions
+- **100% Safe Rust**: Zero `unsafe` blocks — enforced at compile time with `#![forbid(unsafe_code)]`
 
 ## Visual Examples
 

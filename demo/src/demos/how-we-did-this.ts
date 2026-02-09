@@ -239,6 +239,10 @@ export function init(container: HTMLElement) {
           <div class="stat-label">Unsafe Blocks</div>
         </div>
       </div>
+      <p style="margin-top: 16px; color: var(--text-secondary); font-size: 0.95rem;">
+        The library is <strong>100% safe Rust</strong> &mdash; zero <code>unsafe</code> blocks,
+        enforced at compile time with <code>#![forbid(unsafe_code)]</code>.
+      </p>
 
       <div class="story-section" style="margin-top: 40px;">
         <h2>Lessons Learned</h2>

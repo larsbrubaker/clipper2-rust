@@ -242,7 +242,9 @@ fn test_polytree_holes4_issue_618() {
 
 #[test]
 fn test_polytree_holes5() {
-    let subject = vec![clipper2_rust::make_path64(&[0, 30, 400, 30, 400, 100, 0, 100])];
+    let subject = vec![clipper2_rust::make_path64(&[
+        0, 30, 400, 30, 400, 100, 0, 100,
+    ])];
     let clip = vec![
         clipper2_rust::make_path64(&[20, 30, 30, 30, 30, 150, 20, 150]),
         clipper2_rust::make_path64(&[

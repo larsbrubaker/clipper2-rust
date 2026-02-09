@@ -23,28 +23,32 @@ fn do_open_paths() {
 
     // Miter Joins; Square Ends
     let op1 = vec![base.clone()];
-    let op2 = clipper2_rust::inflate_paths_d(&op1, 15.0, JoinType::Miter, EndType::Square, 3.0, 2, 0.0);
+    let op2 =
+        clipper2_rust::inflate_paths_d(&op1, 15.0, JoinType::Miter, EndType::Square, 3.0, 2, 0.0);
     svg_add_open_subject_d(&mut svg, &op1, fr, false);
     svg_add_solution_d(&mut svg, &op2, fr, false);
     svg_add_caption(&mut svg, "Miter Joins; Square Ends", 20, 210);
 
     // Square Joins; Square Ends
     let op1 = clipper2_rust::translate_paths(&op1, 210.0, 0.0);
-    let op2 = clipper2_rust::inflate_paths_d(&op1, 15.0, JoinType::Square, EndType::Square, 2.0, 2, 0.0);
+    let op2 =
+        clipper2_rust::inflate_paths_d(&op1, 15.0, JoinType::Square, EndType::Square, 2.0, 2, 0.0);
     svg_add_open_subject_d(&mut svg, &op1, fr, false);
     svg_add_solution_d(&mut svg, &op2, fr, false);
     svg_add_caption(&mut svg, "Square Joins; Square Ends", 230, 210);
 
     // Bevel Joins; Butt Ends
     let op1 = clipper2_rust::translate_paths(&op1, 210.0, 0.0);
-    let op2 = clipper2_rust::inflate_paths_d(&op1, 15.0, JoinType::Bevel, EndType::Butt, 3.0, 2, 0.0);
+    let op2 =
+        clipper2_rust::inflate_paths_d(&op1, 15.0, JoinType::Bevel, EndType::Butt, 3.0, 2, 0.0);
     svg_add_open_subject_d(&mut svg, &op1, fr, false);
     svg_add_solution_d(&mut svg, &op2, fr, false);
     svg_add_caption(&mut svg, "Bevel Joins; Butt Ends", 440, 210);
 
     // Round Joins; Round Ends
     let op1 = clipper2_rust::translate_paths(&op1, 210.0, 0.0);
-    let op2 = clipper2_rust::inflate_paths_d(&op1, 15.0, JoinType::Round, EndType::Round, 2.0, 2, 0.0);
+    let op2 =
+        clipper2_rust::inflate_paths_d(&op1, 15.0, JoinType::Round, EndType::Round, 2.0, 2, 0.0);
     svg_add_open_subject_d(&mut svg, &op1, fr, false);
     svg_add_solution_d(&mut svg, &op2, fr, false);
     svg_add_caption(&mut svg, "Round Joins; Round Ends", 650, 210);
@@ -61,7 +65,15 @@ fn do_closed_polygon() {
     ])];
     solution.extend(p.iter().cloned());
     for _ in 0..5 {
-        p = clipper2_rust::inflate_paths_d(&p, 5.0, JoinType::Miter, EndType::Polygon, 10.0, 2, 0.0);
+        p = clipper2_rust::inflate_paths_d(
+            &p,
+            5.0,
+            JoinType::Miter,
+            EndType::Polygon,
+            10.0,
+            2,
+            0.0,
+        );
         solution.extend(p.iter().cloned());
     }
 

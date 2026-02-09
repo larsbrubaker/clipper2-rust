@@ -9,8 +9,8 @@ use clipper2_rust::engine_public::{Clipper64, PolyTree64};
 use clipper2_rust::minkowski::{minkowski_diff, minkowski_sum};
 use clipper2_rust::offset::{EndType, JoinType};
 use clipper2_rust::{
-    boolean_op_64, inflate_paths_64, ramer_douglas_peucker, rect_clip_64,
-    rect_clip_lines_64, simplify_path, FillRule,
+    boolean_op_64, inflate_paths_64, ramer_douglas_peucker, rect_clip_64, rect_clip_lines_64,
+    simplify_path, FillRule,
 };
 
 // ============================================================================
@@ -157,13 +157,7 @@ pub fn rect_clip(left: f64, top: f64, right: f64, bottom: f64, paths: &[f64]) ->
 }
 
 #[wasm_bindgen]
-pub fn rect_clip_lines(
-    left: f64,
-    top: f64,
-    right: f64,
-    bottom: f64,
-    lines: &[f64],
-) -> Vec<f64> {
+pub fn rect_clip_lines(left: f64, top: f64, right: f64, bottom: f64, lines: &[f64]) -> Vec<f64> {
     let rect = Rect64::new(left as i64, top as i64, right as i64, bottom as i64);
     let l = decode_paths(lines);
     let result = rect_clip_lines_64(&rect, &l);
@@ -276,12 +270,7 @@ pub fn make_star(cx: f64, cy: f64, outer_r: f64, inner_r: f64, points: u32) -> V
 /// Boolean op returning PolyTree as JSON.
 /// Format: { "children": [ { "polygon": [[x,y],...], "is_hole": bool, "depth": n, "children": [...] } ] }
 #[wasm_bindgen]
-pub fn polytree_op(
-    clip_type: u8,
-    fill_rule: u8,
-    subjects: &[f64],
-    clips: &[f64],
-) -> String {
+pub fn polytree_op(clip_type: u8, fill_rule: u8, subjects: &[f64], clips: &[f64]) -> String {
     let subj = decode_paths(subjects);
     let clp = decode_paths(clips);
     let mut tree = PolyTree64::new();

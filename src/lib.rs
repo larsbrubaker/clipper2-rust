@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 //! # clipper2-rust
 //!
 //! A pure Rust port of the [Clipper2](https://github.com/AngusJohnson/Clipper2) polygon

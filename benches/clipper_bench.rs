@@ -46,7 +46,14 @@ fn bench_inflate_round(c: &mut Criterion) {
 
     c.bench_function("inflate_round_join", |b| {
         b.iter(|| {
-            clipper2_rust::inflate_paths_64(&paths, 10.0, JoinType::Round, EndType::Polygon, 2.0, 0.0)
+            clipper2_rust::inflate_paths_64(
+                &paths,
+                10.0,
+                JoinType::Round,
+                EndType::Polygon,
+                2.0,
+                0.0,
+            )
         })
     });
 }
@@ -58,7 +65,14 @@ fn bench_inflate_miter(c: &mut Criterion) {
 
     c.bench_function("inflate_miter_join", |b| {
         b.iter(|| {
-            clipper2_rust::inflate_paths_64(&paths, 10.0, JoinType::Miter, EndType::Polygon, 2.0, 0.0)
+            clipper2_rust::inflate_paths_64(
+                &paths,
+                10.0,
+                JoinType::Miter,
+                EndType::Polygon,
+                2.0,
+                0.0,
+            )
         })
     });
 }

@@ -242,7 +242,9 @@ fn test_negative_orientation() {
     assert!(!is_positive(&subjects[0]));
     assert!(!is_positive(&subjects[1]));
 
-    let clips = vec![clipper2_rust::make_path64(&[50, 50, 50, 150, 150, 150, 150, 50])];
+    let clips = vec![clipper2_rust::make_path64(&[
+        50, 50, 50, 150, 150, 150, 150, 50,
+    ])];
     assert!(!is_positive(&clips[0]));
 
     let solution = clipper2_rust::union_64(&subjects, &clips, FillRule::Negative);

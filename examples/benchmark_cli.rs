@@ -3,7 +3,9 @@
 
 use clipper2_rust::core::{FillRule, Path64, Point64};
 use clipper2_rust::engine::ClipType;
-use clipper2_rust::utils::svg::{svg_add_clip_64, svg_add_solution_64, svg_add_subject_64, SvgWriter};
+use clipper2_rust::utils::svg::{
+    svg_add_clip_64, svg_add_solution_64, svg_add_subject_64, SvgWriter,
+};
 use rand::Rng;
 use std::time::Instant;
 

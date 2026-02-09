@@ -2,7 +2,9 @@
 // Demonstrates rectangle clipping of random ellipses.
 
 use clipper2_rust::core::{FillRule, Point64, Rect64};
-use clipper2_rust::utils::svg::{svg_add_clip_64, svg_add_solution_64, svg_add_subject_64, SvgWriter};
+use clipper2_rust::utils::svg::{
+    svg_add_clip_64, svg_add_solution_64, svg_add_subject_64, SvgWriter,
+};
 use rand::Rng;
 
 fn main() {

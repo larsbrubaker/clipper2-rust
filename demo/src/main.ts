@@ -127,6 +127,11 @@ function renderHome(container: HTMLElement) {
             <div class="stat-label">Unsafe Blocks</div>
           </div>
         </div>
+        <p style="margin-top: 16px; color: var(--text-secondary); font-size: 0.95rem;">
+          <strong>100% Safe Rust</strong> &mdash; zero <code>unsafe</code> blocks, enforced at compile time
+          with <code>#![forbid(unsafe_code)]</code>. The entire library relies solely on Rust&rsquo;s
+          ownership system and borrow checker for memory safety.
+        </p>
       </div>
     </div>
   `;

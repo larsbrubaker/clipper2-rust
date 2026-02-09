@@ -144,15 +144,31 @@ fn test_offsets4_issue_482() {
 #[test]
 fn test_offsets7_issue_593_715() {
     // Shrink 100x100 square by 50 -> should disappear
-    let mut subject = vec![clipper2_rust::make_path64(&[0, 0, 100, 0, 100, 100, 0, 100])];
-    let solution =
-        clipper2_rust::inflate_paths_64(&subject, -50.0, JoinType::Miter, EndType::Polygon, 2.0, 0.0);
+    let mut subject = vec![clipper2_rust::make_path64(&[
+        0, 0, 100, 0, 100, 100, 0, 100,
+    ])];
+    let solution = clipper2_rust::inflate_paths_64(
+        &subject,
+        -50.0,
+        JoinType::Miter,
+        EndType::Polygon,
+        2.0,
+        0.0,
+    );
     assert_eq!(solution.len(), 0);
 
     // Square with hole, inflated by 10 -> should merge to 1 path
-    subject.push(clipper2_rust::make_path64(&[40, 60, 60, 60, 60, 40, 40, 40]));
-    let solution =
-        clipper2_rust::inflate_paths_64(&subject, 10.0, JoinType::Miter, EndType::Polygon, 2.0, 0.0);
+    subject.push(clipper2_rust::make_path64(&[
+        40, 60, 60, 60, 60, 40, 40, 40,
+    ]));
+    let solution = clipper2_rust::inflate_paths_64(
+        &subject,
+        10.0,
+        JoinType::Miter,
+        EndType::Polygon,
+        2.0,
+        0.0,
+    );
     assert_eq!(solution.len(), 1);
 
     // Reverse both paths, inflate by 10 -> should still be 1
@@ -192,8 +208,14 @@ fn test_offsets9_issue_733() {
     let subject = vec![clipper2_rust::make_path64(&[
         100, 100, 200, 100, 200, 400, 100, 400,
     ])];
-    let solution =
-        clipper2_rust::inflate_paths_64(&subject, 50.0, JoinType::Miter, EndType::Polygon, 2.0, 0.0);
+    let solution = clipper2_rust::inflate_paths_64(
+        &subject,
+        50.0,
+        JoinType::Miter,
+        EndType::Polygon,
+        2.0,
+        0.0,
+    );
     assert_eq!(solution.len(), 1);
     assert!(is_positive(&solution[0]));
 
