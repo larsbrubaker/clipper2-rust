@@ -63,6 +63,10 @@ Comprehensive documentation for the Clipper2 algorithms and API is available at:
 
 The Rust API follows the same structure and naming conventions (adapted to Rust idioms) as the original C++ library, so the upstream documentation serves as an excellent reference.
 
+## Installation
+
+This library is available on [crates.io](https://crates.io/crates/clipper2-rust).
+
 ## Quick Start
 
 Add this to your `Cargo.toml`:
