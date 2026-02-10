@@ -1025,24 +1025,25 @@ body {
     padding-left: 60px;
   }
 
+  /* Keep demo-page viewport-locked (like desktop) so header never scrolls away.
+     Move scrolling to demo-body instead. */
   .demo-page {
-    height: auto;
-    min-height: 100vh;
-    overflow-y: auto;
+    height: 100vh;
+    overflow: hidden;
   }
 
   .demo-body {
-    overflow: visible;
+    overflow-y: auto;
   }
 
   .demo-canvas-area {
     min-height: 250px;
+    flex: none;
     height: 50vh;
   }
 
   .demo-controls {
-    max-height: none;
-    overflow-y: visible;
+    flex-shrink: 0;
   }
 
   /* Code panel: hide desktop toggle, show mobile toggle inside panel */
@@ -1101,8 +1102,37 @@ body {
     bottom: 44px;
   }
 
-  /* Fill rules on small screens */
+  /* Fill rules: keep compact 2x2 grid on mobile */
+  .fill-rules-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    flex: none;
+    height: 50vh;
+    min-height: 200px;
+  }
+
   .fill-rule-cell {
-    min-height: 180px;
+    min-height: 0;
+  }
+
+  .fill-rule-cell .cell-label {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  /* Simplify: constrain stacked panels */
+  .simplify-split {
+    flex: none;
+    height: 50vh;
+    min-height: 200px;
+  }
+
+  .simplify-panel {
+    min-height: 0;
+  }
+
+  .simplify-panel .panel-header {
+    padding: 4px 8px;
+    font-size: 11px;
   }
 }

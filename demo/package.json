@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "bun --watch run server.ts",
+    "dev": "bun --watch run dev.ts",
     "build:wasm": "powershell -File build-wasm.ps1",
     "build": "bun run build.ts"
   },
