@@ -1,0 +1,8 @@
+{
+  "name": "clipper2-rust-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --cwd demo dev"
+  }
+}

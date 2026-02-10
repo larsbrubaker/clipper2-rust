@@ -57,7 +57,7 @@ export function init(container: HTMLElement) {
         <div class="demo-canvas-area">
           <canvas id="demo-canvas"></canvas>
           <div class="canvas-info" id="coord-display">0, 0</div>
-          <div class="canvas-hint">Right-click to pan · Scroll to zoom · Drag shapes to move</div>
+          <div class="canvas-hint"><span class="hint-desktop">Right-click to pan · Scroll to zoom · Drag shapes to move</span><span class="hint-mobile">Drag shapes · Pinch to zoom · Two-finger pan</span></div>
         </div>
         <div class="demo-controls" id="controls"></div>
       </div>

@@ -13,14 +13,26 @@ export function createCodePanel(tabs: CodeTab[]): {
   let isOpen = false;
   let activeTab = 0;
 
-  // Toggle button
+  // Toggle button (positioned in canvas area on desktop)
   const toggle = document.createElement('div');
   toggle.className = 'code-panel-toggle';
   toggle.textContent = 'View Source Code';
 
+  // Mobile toggle button (shown inline before code panel on mobile)
+  const mobileToggle = document.createElement('div');
+  mobileToggle.className = 'code-panel-toggle code-panel-toggle-mobile';
+  mobileToggle.textContent = 'View Source Code';
+
   // Panel container
   const container = document.createElement('div');
   container.className = 'code-panel';
+
+  // Mobile toggle sits inside container but outside the collapsible area
+  container.appendChild(mobileToggle);
+
+  // Collapsible inner wrapper (this is what expands/collapses)
+  const collapsible = document.createElement('div');
+  collapsible.className = 'code-panel-collapsible';
 
   // Header
   const header = document.createElement('div');
@@ -47,8 +59,9 @@ export function createCodePanel(tabs: CodeTab[]): {
   const pre = document.createElement('pre');
   content.appendChild(pre);
 
-  container.appendChild(header);
-  container.appendChild(content);
+  collapsible.appendChild(header);
+  collapsible.appendChild(content);
+  container.appendChild(collapsible);
 
   function renderTabs() {
     tabBar.innerHTML = '';
@@ -70,11 +83,16 @@ export function createCodePanel(tabs: CodeTab[]): {
     pre.innerHTML = highlightSyntax(tab.code, tab.language);
   }
 
-  toggle.addEventListener('click', () => {
+  function toggleOpen() {
     isOpen = !isOpen;
-    container.classList.toggle('open', isOpen);
-    toggle.textContent = isOpen ? 'Hide Source Code' : 'View Source Code';
-  });
+    collapsible.classList.toggle('open', isOpen);
+    const label = isOpen ? 'Hide Source Code' : 'View Source Code';
+    toggle.textContent = label;
+    mobileToggle.textContent = label;
+  }
+
+  toggle.addEventListener('click', toggleOpen);
+  mobileToggle.addEventListener('click', toggleOpen);
 
   renderTabs();
   renderCode();

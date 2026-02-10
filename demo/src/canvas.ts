@@ -40,6 +40,13 @@ export class DemoCanvas {
   private onMouseMove: ((wx: number, wy: number) => void) | null = null;
   private isDragging = false;
 
+  // Touch interaction state
+  private touchDragging = false;
+  private touchPanning = false;
+  private lastTouchDist = 0;
+  private lastTouchMidX = 0;
+  private lastTouchMidY = 0;
+
   // Coordinate display callback
   coordDisplay: HTMLElement | null = null;
 
@@ -210,6 +217,138 @@ export class DemoCanvas {
     });
 
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // ---- Touch events for mobile ----
+    // If drag callbacks are provided, single-finger captures for dragging and
+    // we set touch-action:none to block page scroll. Otherwise, single-finger
+    // passes through to allow normal page scrolling while two-finger still
+    // handles pan/zoom.
+    const hasDragCallbacks = !!(opts?.onDragStart || opts?.onDragMove);
+
+    if (hasDragCallbacks) {
+      // Block all browser touch handling — we control everything
+      this.canvas.style.touchAction = 'none';
+    } else {
+      // Allow single-finger page scrolling; we only capture two-finger gestures.
+      // pinch-zoom is handled by our JS, so block browser's native pinch.
+      this.canvas.style.touchAction = 'pan-x pan-y';
+    }
+
+    this.canvas.addEventListener('touchstart', (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+
+      if (e.touches.length === 1) {
+        if (hasDragCallbacks) {
+          // Single finger: drag shapes (only when drag callbacks exist)
+          e.preventDefault();
+          const t = e.touches[0];
+          const sx = t.clientX - rect.left;
+          const sy = t.clientY - rect.top;
+          const [wx, wy] = this.screenToWorld(sx, sy);
+          this.touchDragging = true;
+          this.touchPanning = false;
+          this.onDragStart?.(wx, wy);
+        }
+        // No drag callbacks: let the touch pass through for page scrolling
+      } else if (e.touches.length === 2) {
+        // Two fingers: always capture for pan/zoom
+        e.preventDefault();
+        if (this.touchDragging) {
+          this.touchDragging = false;
+          this.onDragEnd?.();
+        }
+        this.touchPanning = true;
+        const t0 = e.touches[0];
+        const t1 = e.touches[1];
+        const mx = (t0.clientX + t1.clientX) / 2 - rect.left;
+        const my = (t0.clientY + t1.clientY) / 2 - rect.top;
+        this.lastTouchMidX = mx;
+        this.lastTouchMidY = my;
+        this.lastTouchDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+      }
+    }, { passive: false });
+
+    this.canvas.addEventListener('touchmove', (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+
+      if (e.touches.length === 1 && this.touchDragging) {
+        // Single finger drag (only active when hasDragCallbacks)
+        e.preventDefault();
+        const t = e.touches[0];
+        const sx = t.clientX - rect.left;
+        const sy = t.clientY - rect.top;
+        const [wx, wy] = this.screenToWorld(sx, sy);
+        this.onDragMove?.(wx, wy);
+
+        if (this.coordDisplay) {
+          this.coordDisplay.textContent = `${Math.round(wx)}, ${Math.round(wy)}`;
+        }
+      } else if (e.touches.length === 2) {
+        // Two-finger pan + pinch zoom
+        e.preventDefault();
+        if (!this.touchPanning) {
+          // Transition from 1-finger drag to 2-finger pan
+          if (this.touchDragging) {
+            this.touchDragging = false;
+            this.onDragEnd?.();
+          }
+          this.touchPanning = true;
+          const t0 = e.touches[0];
+          const t1 = e.touches[1];
+          this.lastTouchMidX = (t0.clientX + t1.clientX) / 2 - rect.left;
+          this.lastTouchMidY = (t0.clientY + t1.clientY) / 2 - rect.top;
+          this.lastTouchDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+          return;
+        }
+
+        const t0 = e.touches[0];
+        const t1 = e.touches[1];
+        const mx = (t0.clientX + t1.clientX) / 2 - rect.left;
+        const my = (t0.clientY + t1.clientY) / 2 - rect.top;
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+
+        // Pan: translate by midpoint delta
+        const dx = mx - this.lastTouchMidX;
+        const dy = my - this.lastTouchMidY;
+        this.offsetX += dx;
+        this.offsetY += dy;
+
+        // Pinch zoom: scale towards midpoint
+        if (this.lastTouchDist > 0) {
+          const zoomFactor = dist / this.lastTouchDist;
+          const newScale = this.scale * zoomFactor;
+          this.offsetX = mx - (mx - this.offsetX) * (newScale / this.scale);
+          this.offsetY = my - (my - this.offsetY) * (newScale / this.scale);
+          this.scale = newScale;
+        }
+
+        this.lastTouchMidX = mx;
+        this.lastTouchMidY = my;
+        this.lastTouchDist = dist;
+        redraw();
+      }
+      // Single finger without drag: don't preventDefault, let page scroll
+    }, { passive: false });
+
+    this.canvas.addEventListener('touchend', (e) => {
+      if (e.touches.length === 0) {
+        if (this.touchDragging) {
+          this.touchDragging = false;
+          this.onDragEnd?.();
+        }
+        this.touchPanning = false;
+      } else if (e.touches.length === 1 && this.touchPanning) {
+        this.touchPanning = false;
+      }
+    });
+
+    this.canvas.addEventListener('touchcancel', () => {
+      if (this.touchDragging) {
+        this.touchDragging = false;
+        this.onDragEnd?.();
+      }
+      this.touchPanning = false;
+    });
   }
 
   clear() {

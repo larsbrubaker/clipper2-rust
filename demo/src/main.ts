@@ -18,6 +18,38 @@ const demoModules: Record<string, () => Promise<{ init: DemoInit }>> = {
 
 let currentCleanup: (() => void) | null = null;
 
+// Mobile sidebar toggle
+const menuToggle = document.getElementById('menu-toggle')!;
+const sidebar = document.getElementById('sidebar')!;
+const sidebarOverlay = document.getElementById('sidebar-overlay')!;
+
+function openSidebar() {
+  sidebar.classList.add('open');
+  menuToggle.classList.add('open');
+  sidebarOverlay.classList.add('visible');
+}
+
+function closeSidebar() {
+  sidebar.classList.remove('open');
+  menuToggle.classList.remove('open');
+  sidebarOverlay.classList.remove('visible');
+}
+
+menuToggle.addEventListener('click', () => {
+  if (sidebar.classList.contains('open')) {
+    closeSidebar();
+  } else {
+    openSidebar();
+  }
+});
+
+sidebarOverlay.addEventListener('click', closeSidebar);
+
+// Close sidebar when a nav link is clicked (mobile UX)
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', closeSidebar);
+});
+
 function getRoute(): string {
   const hash = window.location.hash.slice(2) || '';
   return hash || 'home';

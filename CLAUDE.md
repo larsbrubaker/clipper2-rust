@@ -85,6 +85,10 @@ Before implementing any function:
 - Marking functions complete prematurely
 - "Close enough" or "good enough for now" implementations
 
+## Shell
+
+This project uses **PowerShell** on Windows. Heredocs (`<<'EOF'`) don't work — use PowerShell string variables with backtick-n (`` `n ``) for newlines instead.
+
 ## C++ Reference
 
 The original C++ source code is available at [github.com/AngusJohnson/Clipper2](https://github.com/AngusJohnson/Clipper2) for reference. Test data files ported from the C++ test suite are in `Tests/data/`.

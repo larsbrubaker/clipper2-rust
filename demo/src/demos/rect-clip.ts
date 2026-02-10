@@ -51,7 +51,7 @@ export function init(container: HTMLElement) {
         <div class="demo-canvas-area">
           <canvas id="demo-canvas"></canvas>
           <div class="canvas-info" id="coord-display">0, 0</div>
-          <div class="canvas-hint">Drag rectangle edges to resize · Drag body to move · Right-click to pan</div>
+          <div class="canvas-hint"><span class="hint-desktop">Drag rectangle edges to resize · Drag body to move · Right-click to pan</span><span class="hint-mobile">Drag to resize/move · Pinch to zoom · Two-finger pan</span></div>
         </div>
         <div class="demo-controls" id="controls"></div>
       </div>
