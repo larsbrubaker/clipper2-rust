@@ -1,6 +1,7 @@
 import { DemoCanvas } from '../canvas.ts';
 import { createDropdown, createCheckbox, createSeparator, createInfoBox, createButtonGroup, createReadout, updateReadout } from '../controls.ts';
 import { createCodePanel } from '../code-display.ts';
+import { loadDemoState, saveDemoState } from '../persist.ts';
 import { booleanOp, ClipType, FillRule, makeStar, makeEllipse, singlePathArea, pointInPolygon } from '../wasm.ts';
 
 const RUST_CODE = `pub fn boolean_op_64(
@@ -30,16 +31,28 @@ const result = booleanOp(
 );`;
 
 export function init(container: HTMLElement) {
-  // State
-  let clipType = ClipType.Intersection;
-  let fillRule = FillRule.EvenOdd;
-  let showSubject = true;
-  let showClip = true;
-  let showResult = true;
+  const persisted = loadDemoState('boolean-ops', {
+    clipType: ClipType.Intersection,
+    fillRule: FillRule.EvenOdd,
+    showSubject: true,
+    showClip: true,
+    showResult: true,
+    subjectPreset: 'star',
+    clipPreset: 'circle',
+    subjectPaths: [makeStar(200, 200, 180, 80, 5)],
+    clipPaths: [makeEllipse(280, 220, 150, 130, 0)],
+  });
 
-  // Default shapes
-  let subjectPaths: number[][][] = [makeStar(200, 200, 180, 80, 5)];
-  let clipPaths: number[][][] = [makeEllipse(280, 220, 150, 130, 0)];
+  // State
+  let clipType = persisted.clipType as ClipType;
+  let fillRule = persisted.fillRule as FillRule;
+  let showSubject = persisted.showSubject;
+  let showClip = persisted.showClip;
+  let showResult = persisted.showResult;
+  let subjectPreset = persisted.subjectPreset;
+  let clipPreset = persisted.clipPreset;
+  let subjectPaths: number[][][] = persisted.subjectPaths;
+  let clipPaths: number[][][] = persisted.clipPaths;
 
   // Dragging
   let dragTarget: 'subject' | 'clip' | null = null;
@@ -68,6 +81,20 @@ export function init(container: HTMLElement) {
   canvas.coordDisplay = document.getElementById('coord-display');
   const controls = document.getElementById('controls')!;
 
+  function persistState() {
+    saveDemoState('boolean-ops', {
+      clipType,
+      fillRule,
+      showSubject,
+      showClip,
+      showResult,
+      subjectPreset,
+      clipPreset,
+      subjectPaths,
+      clipPaths,
+    });
+  }
+
   // Controls
   controls.appendChild(createInfoBox('Select a clip operation and fill rule, then drag shapes to explore.'));
 
@@ -76,14 +103,14 @@ export function init(container: HTMLElement) {
     { value: '2', text: 'Union' },
     { value: '3', text: 'Difference' },
     { value: '4', text: 'Xor' },
-  ], (v) => { clipType = parseInt(v) as ClipType; redraw(); }));
+  ], String(clipType), (v) => { clipType = parseInt(v) as ClipType; persistState(); redraw(); }));
 
   controls.appendChild(createDropdown('Fill Rule', [
     { value: '0', text: 'EvenOdd' },
     { value: '1', text: 'NonZero' },
     { value: '2', text: 'Positive' },
     { value: '3', text: 'Negative' },
-  ], (v) => { fillRule = parseInt(v) as FillRule; redraw(); }));
+  ], String(fillRule), (v) => { fillRule = parseInt(v) as FillRule; persistState(); redraw(); }));
 
   controls.appendChild(createSeparator());
 
@@ -96,7 +123,8 @@ export function init(container: HTMLElement) {
     { label: 'Heptagram', value: 'heptagram' },
     { label: 'Square', value: 'square' },
     { label: 'Circle', value: 'circle' },
-  ], 'star', (v) => {
+  ], subjectPreset, (v) => {
+    subjectPreset = v;
     const cx = 200, cy = 200;
     if (v === 'star') subjectPaths = [makeStar(cx, cy, 180, 80, 5)];
     else if (v === 'heptagram') {
@@ -111,6 +139,7 @@ export function init(container: HTMLElement) {
     }
     else if (v === 'square') subjectPaths = [[[cx-150,cy-150],[cx+150,cy-150],[cx+150,cy+150],[cx-150,cy+150]]];
     else subjectPaths = [makeEllipse(cx, cy, 160, 160, 0)];
+    persistState();
     redraw();
   }));
 
@@ -122,18 +151,20 @@ export function init(container: HTMLElement) {
     { label: 'Circle', value: 'circle' },
     { label: 'Square', value: 'square' },
     { label: 'Star', value: 'star' },
-  ], 'circle', (v) => {
+  ], clipPreset, (v) => {
+    clipPreset = v;
     const cx = 280, cy = 220;
     if (v === 'circle') clipPaths = [makeEllipse(cx, cy, 150, 130, 0)];
     else if (v === 'square') clipPaths = [[[cx-130,cy-130],[cx+130,cy-130],[cx+130,cy+130],[cx-130,cy+130]]];
     else clipPaths = [makeStar(cx, cy, 150, 60, 6)];
+    persistState();
     redraw();
   }));
 
   controls.appendChild(createSeparator());
-  controls.appendChild(createCheckbox('Show Subject', showSubject, (v) => { showSubject = v; redraw(); }));
-  controls.appendChild(createCheckbox('Show Clip', showClip, (v) => { showClip = v; redraw(); }));
-  controls.appendChild(createCheckbox('Show Result', showResult, (v) => { showResult = v; redraw(); }));
+  controls.appendChild(createCheckbox('Show Subject', showSubject, (v) => { showSubject = v; persistState(); redraw(); }));
+  controls.appendChild(createCheckbox('Show Clip', showClip, (v) => { showClip = v; persistState(); redraw(); }));
+  controls.appendChild(createCheckbox('Show Result', showResult, (v) => { showResult = v; persistState(); redraw(); }));
 
   controls.appendChild(createSeparator());
   const readout = createReadout();
@@ -202,6 +233,7 @@ export function init(container: HTMLElement) {
     },
     onDragEnd() {
       dragTarget = null;
+      persistState();
     },
     redraw() { redraw(); },
   });

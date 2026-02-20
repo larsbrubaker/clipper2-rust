@@ -1,6 +1,7 @@
 import { DemoCanvas } from '../canvas.ts';
 import { createCheckbox, createSeparator, createInfoBox, createButton, createReadout, updateReadout } from '../controls.ts';
 import { createCodePanel } from '../code-display.ts';
+import { loadDemoState, saveDemoState } from '../persist.ts';
 import { rectClip, rectClipLines, makeEllipse, makeStar } from '../wasm.ts';
 
 const RUST_CODE = `pub fn rect_clip_64(rect: &Rect64, paths: &Paths64) -> Paths64 {
@@ -26,14 +27,36 @@ const closed = rectClip(100, 100, 400, 400, subjects);
 const open = rectClipLines(100, 100, 400, 400, lines);`;
 
 export function init(container: HTMLElement) {
-  let linesMode = false;
-  let rectLeft = 120, rectTop = 100, rectRight = 420, rectBottom = 380;
+  function makeDefaultShapes(): number[][][] {
+    return [
+      makeEllipse(200, 180, 120, 100, 0),
+      makeStar(350, 300, 110, 50, 5),
+      makeEllipse(150, 340, 80, 80, 0),
+    ];
+  }
+  const persisted = loadDemoState('rect-clip', {
+    linesMode: false,
+    rectLeft: 120,
+    rectTop: 100,
+    rectRight: 420,
+    rectBottom: 380,
+    shapes: makeDefaultShapes(),
+  });
 
-  let shapes: number[][][] = [
-    makeEllipse(200, 180, 120, 100, 0),
-    makeStar(350, 300, 110, 50, 5),
-    makeEllipse(150, 340, 80, 80, 0),
-  ];
+  let linesMode = persisted.linesMode;
+  let rectLeft = persisted.rectLeft, rectTop = persisted.rectTop, rectRight = persisted.rectRight, rectBottom = persisted.rectBottom;
+  let shapes: number[][][] = persisted.shapes;
+  function persistState() {
+    saveDemoState('rect-clip', {
+      linesMode,
+      rectLeft,
+      rectTop,
+      rectRight,
+      rectBottom,
+      shapes,
+    });
+  }
+
 
   // Rect drag state
   let dragEdge: 'left' | 'right' | 'top' | 'bottom' | 'move' | null = null;
@@ -63,7 +86,7 @@ export function init(container: HTMLElement) {
   const controls = document.getElementById('controls')!;
 
   controls.appendChild(createInfoBox('Drag the clipping rectangle to see portions of shapes clipped in real-time.'));
-  controls.appendChild(createCheckbox('Open lines mode', linesMode, (v) => { linesMode = v; redraw(); }));
+  controls.appendChild(createCheckbox('Open lines mode', linesMode, (v) => { linesMode = v; persistState(); redraw(); }));
   controls.appendChild(createSeparator());
 
   controls.appendChild(createButton('Add Ellipse', () => {
@@ -74,6 +97,7 @@ export function init(container: HTMLElement) {
       50 + Math.random() * 80,
       0
     ));
+    persistState();
     redraw();
   }));
   controls.appendChild(createButton('Add Star', () => {
@@ -84,15 +108,13 @@ export function init(container: HTMLElement) {
       20 + Math.random() * 30,
       3 + Math.floor(Math.random() * 5)
     ));
+    persistState();
     redraw();
   }));
   controls.appendChild(createButton('Reset', () => {
-    shapes = [
-      makeEllipse(200, 180, 120, 100, 0),
-      makeStar(350, 300, 110, 50, 5),
-      makeEllipse(150, 340, 80, 80, 0),
-    ];
+    shapes = makeDefaultShapes();
     rectLeft = 120; rectTop = 100; rectRight = 420; rectBottom = 380;
+    persistState();
     redraw();
   }));
 
@@ -144,7 +166,7 @@ export function init(container: HTMLElement) {
       }
       redraw();
     },
-    onDragEnd() { dragEdge = null; },
+    onDragEnd() { dragEdge = null; persistState(); },
     redraw() { redraw(); },
   });
 

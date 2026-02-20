@@ -1,6 +1,7 @@
 import { DemoCanvas } from '../canvas.ts';
 import { createDropdown, createSeparator, createInfoBox, createButtonGroup, createReadout, updateReadout } from '../controls.ts';
 import { createCodePanel } from '../code-display.ts';
+import { loadDemoState, saveDemoState } from '../persist.ts';
 import { polyTreeOp, ClipType, FillRule, type PolyTreeNode } from '../wasm.ts';
 
 const RUST_CODE = `pub fn boolean_op_tree_64(
@@ -40,17 +41,29 @@ const DEPTH_COLORS = [
 ];
 
 export function init(container: HTMLElement) {
-  let fillRule = FillRule.EvenOdd;
-  let selectedNodeIdx = -1;
-
-  // Concentric rectangles creating holes
-  let subjects: number[][][] = [
-    [[50, 50], [450, 50], [450, 450], [50, 450]],     // Outer
-    [[100, 100], [400, 100], [400, 400], [100, 400]],  // Hole
-    [[150, 150], [350, 150], [350, 350], [150, 350]],  // Nested
-    [[200, 200], [300, 200], [300, 300], [200, 300]],  // Nested hole
+  const defaultSubjects: number[][][] = [
+    [[50, 50], [450, 50], [450, 450], [50, 450]],
+    [[100, 100], [400, 100], [400, 400], [100, 400]],
+    [[150, 150], [350, 150], [350, 350], [150, 350]],
+    [[200, 200], [300, 200], [300, 300], [200, 300]],
   ];
-  let clips: number[][][] = [];
+  const persisted = loadDemoState('polytree', {
+    fillRule: FillRule.EvenOdd,
+    selectedNodeIdx: -1,
+    preset: 'nested',
+    subjects: defaultSubjects,
+    clips: [] as number[][][],
+  });
+
+  let fillRule = persisted.fillRule as FillRule;
+  let selectedNodeIdx = persisted.selectedNodeIdx;
+  let preset = persisted.preset;
+  let subjects: number[][][] = persisted.subjects;
+  let clips: number[][][] = persisted.clips;
+  function persistState() {
+    saveDemoState('polytree', { fillRule, selectedNodeIdx, preset, subjects, clips });
+  }
+
 
   container.innerHTML = `
     <div class="demo-page">
@@ -83,7 +96,7 @@ export function init(container: HTMLElement) {
   controls.appendChild(createDropdown('Fill Rule', [
     { value: '0', text: 'EvenOdd' },
     { value: '1', text: 'NonZero' },
-  ], (v) => { fillRule = parseInt(v) as FillRule; redraw(); }));
+  ], String(fillRule), (v) => { fillRule = parseInt(v) as FillRule; persistState(); redraw(); }));
 
   controls.appendChild(createSeparator());
   const presetLabel = document.createElement('div');
@@ -94,7 +107,8 @@ export function init(container: HTMLElement) {
     { label: 'Nested rects', value: 'nested' },
     { label: 'Two shapes', value: 'two' },
     { label: 'Complex', value: 'complex' },
-  ], 'nested', (v) => {
+  ], preset, (v) => {
+    preset = v;
     clips = [];
     if (v === 'nested') {
       subjects = [
@@ -125,6 +139,7 @@ export function init(container: HTMLElement) {
       ];
     }
     selectedNodeIdx = -1;
+    persistState();
     redraw();
   }));
 
@@ -176,6 +191,7 @@ export function init(container: HTMLElement) {
       `;
       el.addEventListener('click', () => {
         selectedNodeIdx = i;
+        persistState();
         redraw();
       });
       treePanel.appendChild(el);

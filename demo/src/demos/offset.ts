@@ -1,6 +1,7 @@
 import { DemoCanvas } from '../canvas.ts';
 import { createSlider, createDropdown, createCheckbox, createSeparator, createInfoBox, createReadout, updateReadout } from '../controls.ts';
 import { createCodePanel } from '../code-display.ts';
+import { loadDemoState, saveDemoState } from '../persist.ts';
 import { inflatePaths, JoinType, EndType, makeStar, makeEllipse } from '../wasm.ts';
 
 const RUST_CODE = `pub fn inflate_paths_64(
@@ -30,17 +31,25 @@ const JS_CODE = `const result = inflatePaths(
 );`;
 
 export function init(container: HTMLElement) {
-  let delta = 20;
-  let joinType = JoinType.Round;
-  let endType = EndType.Polygon;
-  let miterLimit = 2.0;
-  let arcTolerance = 0.0;
-  let isOpen = false;
+  const persisted = loadDemoState('offset', {
+    delta: 20,
+    joinType: JoinType.Round,
+    endType: EndType.Polygon,
+    miterLimit: 2.0,
+    arcTolerance: 0.0,
+    isOpen: false,
+    paths: [
+      [[100, 100], [350, 100], [350, 200], [250, 200], [250, 350], [100, 350]],
+    ],
+  });
 
-  // Default paths
-  let paths: number[][][] = [
-    [[100, 100], [350, 100], [350, 200], [250, 200], [250, 350], [100, 350]]
-  ];
+  let delta = persisted.delta;
+  let joinType = persisted.joinType as JoinType;
+  let endType = persisted.endType as EndType;
+  let miterLimit = persisted.miterLimit;
+  let arcTolerance = persisted.arcTolerance;
+  let isOpen = persisted.isOpen;
+  let paths: number[][][] = persisted.paths;
 
   container.innerHTML = `
     <div class="demo-page">
@@ -63,9 +72,21 @@ export function init(container: HTMLElement) {
   canvas.coordDisplay = document.getElementById('coord-display');
   const controls = document.getElementById('controls')!;
 
+  function persistState() {
+    saveDemoState('offset', {
+      delta,
+      joinType,
+      endType,
+      miterLimit,
+      arcTolerance,
+      isOpen,
+      paths,
+    });
+  }
+
   controls.appendChild(createInfoBox('Adjust the delta to inflate (positive) or deflate (negative) the path.'));
 
-  const deltaSlider = createSlider('Delta', -50, 80, delta, 1, (v) => { delta = v; redraw(); });
+  const deltaSlider = createSlider('Delta', -50, 80, delta, 1, (v) => { delta = v; persistState(); redraw(); });
   controls.appendChild(deltaSlider);
 
   controls.appendChild(createDropdown('Join Type', [
@@ -73,7 +94,7 @@ export function init(container: HTMLElement) {
     { value: '0', text: 'Square' },
     { value: '1', text: 'Bevel' },
     { value: '3', text: 'Miter' },
-  ], (v) => { joinType = parseInt(v) as JoinType; redraw(); }));
+  ], String(joinType), (v) => { joinType = parseInt(v) as JoinType; persistState(); redraw(); }));
 
   controls.appendChild(createDropdown('End Type', [
     { value: '0', text: 'Polygon (closed)' },
@@ -81,15 +102,16 @@ export function init(container: HTMLElement) {
     { value: '2', text: 'Butt' },
     { value: '3', text: 'Square' },
     { value: '4', text: 'Round' },
-  ], (v) => { endType = parseInt(v) as EndType; redraw(); }));
+  ], String(endType), (v) => { endType = parseInt(v) as EndType; persistState(); redraw(); }));
 
-  controls.appendChild(createSlider('Miter Limit', 1, 10, miterLimit, 0.5, (v) => { miterLimit = v; redraw(); }));
-  controls.appendChild(createSlider('Arc Tolerance', 0, 10, arcTolerance, 0.5, (v) => { arcTolerance = v; redraw(); }));
+  controls.appendChild(createSlider('Miter Limit', 1, 10, miterLimit, 0.5, (v) => { miterLimit = v; persistState(); redraw(); }));
+  controls.appendChild(createSlider('Arc Tolerance', 0, 10, arcTolerance, 0.5, (v) => { arcTolerance = v; persistState(); redraw(); }));
 
   controls.appendChild(createSeparator());
   controls.appendChild(createCheckbox('Open path mode', isOpen, (v) => {
     isOpen = v;
     if (isOpen && endType === EndType.Polygon) endType = EndType.Round;
+    persistState();
     redraw();
   }));
 
@@ -129,7 +151,7 @@ export function init(container: HTMLElement) {
         redraw();
       }
     },
-    onDragEnd() { dragIdx = null; },
+    onDragEnd() { dragIdx = null; persistState(); },
     redraw() { redraw(); },
   });
 

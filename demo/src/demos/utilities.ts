@@ -1,6 +1,7 @@
 import { DemoCanvas } from '../canvas.ts';
 import { createSeparator, createInfoBox, createButton, createReadout, updateReadout } from '../controls.ts';
 import { createCodePanel } from '../code-display.ts';
+import { loadDemoState, saveDemoState } from '../persist.ts';
 import { pointInPolygon, singlePathArea, isPositivePath, getBounds, makeEllipse, makeStar } from '../wasm.ts';
 
 const RUST_CODE = `// Point-in-polygon test using winding number rule
@@ -33,12 +34,20 @@ const isCCW = isPositivePath(polygon);
 const { left, top, right, bottom } = getBounds([polygon]);`;
 
 export function init(container: HTMLElement) {
-  let polygon: number[][] = [
-    [100, 80], [400, 80], [450, 250], [350, 420], [150, 420], [50, 250]
-  ];
-  let testPoints: { x: number; y: number; result: number }[] = [];
+  const persisted = loadDemoState('utilities', {
+    polygon: [
+      [100, 80], [400, 80], [450, 250], [350, 420], [150, 420], [50, 250],
+    ],
+    testPoints: [] as { x: number; y: number; result: number }[],
+  });
+  let polygon: number[][] = persisted.polygon;
+  let testPoints: { x: number; y: number; result: number }[] = persisted.testPoints;
   let mouseWorld: [number, number] = [0, 0];
   let mouseResult = 0;
+  function persistState() {
+    saveDemoState('utilities', { polygon, testPoints });
+  }
+
 
   container.innerHTML = `
     <div class="demo-page">
@@ -70,20 +79,24 @@ export function init(container: HTMLElement) {
   controls.appendChild(createButton('Hexagon', () => {
     polygon = [[100, 80], [400, 80], [450, 250], [350, 420], [150, 420], [50, 250]];
     testPoints = [];
+    persistState();
     redraw();
   }));
   controls.appendChild(createButton('Star', () => {
     polygon = makeStar(250, 250, 200, 80, 5);
     testPoints = [];
+    persistState();
     redraw();
   }));
   controls.appendChild(createButton('Circle', () => {
     polygon = makeEllipse(250, 250, 180, 180, 0);
     testPoints = [];
+    persistState();
     redraw();
   }));
   controls.appendChild(createButton('Clear points', () => {
     testPoints = [];
+    persistState();
     redraw();
   }));
 
@@ -128,6 +141,7 @@ export function init(container: HTMLElement) {
       const y = Math.round(wy);
       const result = pointInPolygon(x, y, polygon);
       testPoints.push({ x, y, result });
+      persistState();
       redraw();
     },
     onDragMove(wx, wy) {
@@ -137,6 +151,7 @@ export function init(container: HTMLElement) {
         for (const tp of testPoints) {
           tp.result = pointInPolygon(tp.x, tp.y, polygon);
         }
+        persistState();
         redraw();
       }
     },

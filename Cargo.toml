@@ -3,7 +3,7 @@ members = [".", "demo/wasm"]
 
 [package]
 name = "clipper2-rust"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 rust-version = "1.70"
 authors = ["Lars Brubaker <larsbrubaker@matterhackers.com>"]

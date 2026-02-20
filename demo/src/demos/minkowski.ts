@@ -1,6 +1,7 @@
 import { DemoCanvas } from '../canvas.ts';
 import { createSlider, createCheckbox, createSeparator, createInfoBox, createButtonGroup, createReadout, updateReadout } from '../controls.ts';
 import { createCodePanel } from '../code-display.ts';
+import { loadDemoState, saveDemoState } from '../persist.ts';
 import { minkowskiSum, minkowskiDiff, makeEllipse } from '../wasm.ts';
 
 const RUST_CODE = `pub fn minkowski_sum(
@@ -32,15 +33,25 @@ const result = minkowskiSum(pattern, path, true);
 const diff = minkowskiDiff(pattern, path, true);`;
 
 export function init(container: HTMLElement) {
-  let isClosed = true;
-  let isSum = true;
-  let patternSize = 30;
-  let patternType = 'circle';
+  const persisted = loadDemoState('minkowski', {
+    isClosed: true,
+    isSum: true,
+    patternSize: 30,
+    patternType: 'circle',
+    path: [
+      [100, 100], [400, 100], [400, 250], [250, 250], [250, 400], [100, 400],
+    ],
+  });
 
-  // L-shaped path
-  let path: number[][] = [
-    [100, 100], [400, 100], [400, 250], [250, 250], [250, 400], [100, 400]
-  ];
+  let isClosed = persisted.isClosed;
+  let isSum = persisted.isSum;
+  let patternSize = persisted.patternSize;
+  let patternType = persisted.patternType;
+  let path: number[][] = persisted.path;
+  function persistState() {
+    saveDemoState('minkowski', { isClosed, isSum, patternSize, patternType, path });
+  }
+
 
   function getPattern(): number[][] {
     if (patternType === 'circle') {
@@ -84,7 +95,7 @@ export function init(container: HTMLElement) {
   controls.appendChild(createButtonGroup([
     { label: 'Sum', value: 'sum' },
     { label: 'Difference', value: 'diff' },
-  ], 'sum', (v) => { isSum = v === 'sum'; redraw(); }));
+  ], isSum ? 'sum' : 'diff', (v) => { isSum = v === 'sum'; persistState(); redraw(); }));
 
   const patLabel = document.createElement('div');
   patLabel.className = 'control-group';
@@ -94,10 +105,10 @@ export function init(container: HTMLElement) {
     { label: 'Circle', value: 'circle' },
     { label: 'Square', value: 'square' },
     { label: 'Triangle', value: 'triangle' },
-  ], 'circle', (v) => { patternType = v; redraw(); }));
+  ], patternType, (v) => { patternType = v; persistState(); redraw(); }));
 
-  controls.appendChild(createSlider('Pattern Size', 5, 80, patternSize, 1, (v) => { patternSize = v; redraw(); }));
-  controls.appendChild(createCheckbox('Closed path', isClosed, (v) => { isClosed = v; redraw(); }));
+  controls.appendChild(createSlider('Pattern Size', 5, 80, patternSize, 1, (v) => { patternSize = v; persistState(); redraw(); }));
+  controls.appendChild(createCheckbox('Closed path', isClosed, (v) => { isClosed = v; persistState(); redraw(); }));
 
   controls.appendChild(createSeparator());
   const readout = createReadout();
@@ -129,7 +140,7 @@ export function init(container: HTMLElement) {
         redraw();
       }
     },
-    onDragEnd() { dragIdx = null; },
+    onDragEnd() { dragIdx = null; persistState(); },
     redraw() { redraw(); },
   });
 

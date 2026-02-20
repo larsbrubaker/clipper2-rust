@@ -1,6 +1,7 @@
 import { DemoCanvas } from '../canvas.ts';
 import { createSlider, createCheckbox, createSeparator, createInfoBox, createButton, createReadout, updateReadout } from '../controls.ts';
 import { createCodePanel } from '../code-display.ts';
+import { loadDemoState, saveDemoState } from '../persist.ts';
 import { simplifyPaths, rdpSimplify } from '../wasm.ts';
 
 const RUST_CODE = `// SimplifyPath: removes vertices within epsilon of imaginary line
@@ -23,10 +24,6 @@ const simplified = simplifyPaths([path], epsilon, isClosed);
 const rdpResult = rdpSimplify([path], epsilon);`;
 
 export function init(container: HTMLElement) {
-  let epsilon = 5;
-  let isClosed = false;
-  let originalPath: number[][] = generateSpiralPath();
-
   function generateSpiralPath(): number[][] {
     const pts: number[][] = [];
     for (let i = 0; i <= 200; i++) {
@@ -41,6 +38,19 @@ export function init(container: HTMLElement) {
     }
     return pts;
   }
+
+  const persisted = loadDemoState('simplify', {
+    epsilon: 5,
+    isClosed: false,
+    originalPath: generateSpiralPath(),
+  });
+  let epsilon = persisted.epsilon;
+  let isClosed = persisted.isClosed;
+  let originalPath: number[][] = persisted.originalPath;
+  function persistState() {
+    saveDemoState('simplify', { epsilon, isClosed, originalPath });
+  }
+
 
   container.innerHTML = `
     <div class="demo-page">
@@ -78,11 +88,11 @@ export function init(container: HTMLElement) {
 
   controls.appendChild(createInfoBox('Increase epsilon to remove more points. SimplifyPath uses perpendicular distance; RDP recursively selects the most important points.'));
 
-  controls.appendChild(createSlider('Epsilon', 0, 50, epsilon, 1, (v) => { epsilon = v; redraw(); }));
-  controls.appendChild(createCheckbox('Closed path', isClosed, (v) => { isClosed = v; redraw(); }));
+  controls.appendChild(createSlider('Epsilon', 0, 50, epsilon, 1, (v) => { epsilon = v; persistState(); redraw(); }));
+  controls.appendChild(createCheckbox('Closed path', isClosed, (v) => { isClosed = v; persistState(); redraw(); }));
 
   controls.appendChild(createSeparator());
-  controls.appendChild(createButton('Spiral (dense)', () => { originalPath = generateSpiralPath(); redraw(); }));
+  controls.appendChild(createButton('Spiral (dense)', () => { originalPath = generateSpiralPath(); persistState(); redraw(); }));
   controls.appendChild(createButton('Zigzag', () => {
     const pts: number[][] = [];
     for (let i = 0; i <= 100; i++) {
@@ -91,6 +101,7 @@ export function init(container: HTMLElement) {
       pts.push([Math.round(x), Math.round(y)]);
     }
     originalPath = pts;
+    persistState();
     redraw();
   }));
   controls.appendChild(createButton('Random walk', () => {
@@ -103,6 +114,7 @@ export function init(container: HTMLElement) {
       ]);
     }
     originalPath = pts;
+    persistState();
     redraw();
   }));
 
@@ -132,15 +144,17 @@ export function init(container: HTMLElement) {
     const rect = spCanvas.getBoundingClientRect();
     const [wx, wy] = canvasSP.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
     originalPath.push([Math.round(wx), Math.round(wy)]);
+    persistState();
   });
   spCanvas.addEventListener('mousemove', (e) => {
     if (!isDrawing) return;
     const rect = spCanvas.getBoundingClientRect();
     const [wx, wy] = canvasSP.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
     originalPath.push([Math.round(wx), Math.round(wy)]);
+    persistState();
     redraw();
   });
-  spCanvas.addEventListener('mouseup', () => { isDrawing = false; redraw(); });
+  spCanvas.addEventListener('mouseup', () => { isDrawing = false; persistState(); redraw(); });
   spCanvas.addEventListener('mouseleave', () => { isDrawing = false; });
 
   function redraw() {

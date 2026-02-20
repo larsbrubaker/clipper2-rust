@@ -1,6 +1,7 @@
 import { DemoCanvas } from '../canvas.ts';
 import { createButtonGroup, createSeparator, createInfoBox } from '../controls.ts';
 import { createCodePanel } from '../code-display.ts';
+import { loadDemoState, saveDemoState } from '../persist.ts';
 import { booleanOp, ClipType, FillRule, makeStar } from '../wasm.ts';
 
 const RUST_CODE = `// FillRule determines how self-intersecting polygons are filled
@@ -23,7 +24,16 @@ const positive = booleanOp(ClipType.Union, FillRule.Positive, [polygon], []);
 const negative = booleanOp(ClipType.Union, FillRule.Negative, [polygon], []);`;
 
 export function init(container: HTMLElement) {
-  let polygon: number[][] = makeStar(250, 250, 200, 80, 5);
+  const persisted = loadDemoState('fill-rules', {
+    shapePreset: 'star5',
+    polygon: makeStar(250, 250, 200, 80, 5),
+  });
+  let shapePreset = persisted.shapePreset;
+  let polygon: number[][] = persisted.polygon;
+  function persistState() {
+    saveDemoState('fill-rules', { shapePreset, polygon });
+  }
+
 
   container.innerHTML = `
     <div class="demo-page">
@@ -75,7 +85,8 @@ export function init(container: HTMLElement) {
     { label: 'Heptagram', value: 'star73' },
     { label: 'Butterfly', value: 'butterfly' },
     { label: 'Rings', value: 'rings' },
-  ], 'star5', (v) => {
+  ], shapePreset, (v) => {
+    shapePreset = v;
     const cx = 250, cy = 250;
     switch (v) {
       case 'star5':
@@ -123,6 +134,7 @@ export function init(container: HTMLElement) {
         break;
       }
     }
+    persistState();
     redraw();
   }));
 

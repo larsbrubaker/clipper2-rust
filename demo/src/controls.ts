@@ -34,6 +34,7 @@ export function createSlider(
 export function createDropdown(
   label: string,
   options: { value: string; text: string }[],
+  selectedValue: string,
   onChange: (val: string) => void,
 ): HTMLElement {
   const group = document.createElement('div');
@@ -48,6 +49,7 @@ export function createDropdown(
     o.textContent = opt.text;
     select.appendChild(o);
   }
+  select.value = selectedValue;
   select.addEventListener('change', () => onChange(select.value));
 
   group.appendChild(lbl);

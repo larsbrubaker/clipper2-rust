@@ -431,24 +431,36 @@ export class DemoCanvas {
     if (opts.alpha !== undefined) ctx.globalAlpha = opts.alpha;
     if (opts.lineDash) ctx.setLineDash(opts.lineDash);
 
-    for (const path of paths) {
-      if (path.length < 2) continue;
+    // Fill all polygons in a single path so non-zero winding can carve holes.
+    if (opts.fill) {
       ctx.beginPath();
-      const [sx, sy] = this.worldToScreen(path[0][0], path[0][1]);
-      ctx.moveTo(sx, sy);
-      for (let i = 1; i < path.length; i++) {
-        const [px, py] = this.worldToScreen(path[i][0], path[i][1]);
-        ctx.lineTo(px, py);
+      for (const path of paths) {
+        if (path.length < 2) continue;
+        const [sx, sy] = this.worldToScreen(path[0][0], path[0][1]);
+        ctx.moveTo(sx, sy);
+        for (let i = 1; i < path.length; i++) {
+          const [px, py] = this.worldToScreen(path[i][0], path[i][1]);
+          ctx.lineTo(px, py);
+        }
+        if (opts.closed !== false) ctx.closePath();
       }
-      if (opts.closed !== false) ctx.closePath();
+      ctx.fillStyle = opts.fill;
+      ctx.fill(opts.fill?.includes('evenodd') ? 'evenodd' : 'nonzero');
+    }
 
-      if (opts.fill) {
-        ctx.fillStyle = opts.fill;
-        ctx.fill(opts.fill?.includes('evenodd') ? 'evenodd' : 'nonzero');
-      }
-      if (opts.stroke) {
-        ctx.strokeStyle = opts.stroke;
-        ctx.lineWidth = opts.lineWidth ?? 1.5;
+    if (opts.stroke) {
+      ctx.strokeStyle = opts.stroke;
+      ctx.lineWidth = opts.lineWidth ?? 1.5;
+      for (const path of paths) {
+        if (path.length < 2) continue;
+        ctx.beginPath();
+        const [sx, sy] = this.worldToScreen(path[0][0], path[0][1]);
+        ctx.moveTo(sx, sy);
+        for (let i = 1; i < path.length; i++) {
+          const [px, py] = this.worldToScreen(path[i][0], path[i][1]);
+          ctx.lineTo(px, py);
+        }
+        if (opts.closed !== false) ctx.closePath();
         ctx.stroke();
       }
     }
