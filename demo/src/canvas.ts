@@ -10,6 +10,7 @@ export interface DrawOptions {
   vertexRadius?: number;
   vertexColor?: string;
   closed?: boolean;
+  fillRule?: 'nonzero' | 'evenodd';
 }
 
 const GRID_COLOR = '#e8eaed';
@@ -445,7 +446,7 @@ export class DemoCanvas {
         if (opts.closed !== false) ctx.closePath();
       }
       ctx.fillStyle = opts.fill;
-      ctx.fill(opts.fill?.includes('evenodd') ? 'evenodd' : 'nonzero');
+      ctx.fill(opts.fillRule ?? 'nonzero');
     }
 
     if (opts.stroke) {

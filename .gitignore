@@ -3,3 +3,5 @@
 node_modules/
 demo/dist/
 nul
+.cursor/
+bun.lock

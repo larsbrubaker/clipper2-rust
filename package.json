@@ -5,5 +5,8 @@
   "scripts": {
     "dev": "wasm-pack build demo/wasm --target web --out-dir ../public/pkg && bun run --cwd demo dev",
     "dev:watch": "bun run --cwd demo dev"
+  },
+  "devDependencies": {
+    "wasm-pack": "^0.14.0"
   }
 }

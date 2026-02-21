@@ -253,12 +253,17 @@ export function init(container: HTMLElement) {
       console.error('Boolean op error:', e);
     }
 
+    // Map Clipper FillRule to canvas fill rule for input path rendering.
+    // EvenOdd uses canvas 'evenodd'; all others (NonZero, Positive, Negative)
+    // use canvas 'nonzero' since they are winding-number based.
+    const canvasFillRule = fillRule === FillRule.EvenOdd ? 'evenodd' as const : 'nonzero' as const;
+
     // Draw
     if (showSubject) {
-      canvas.drawPaths(subjectPaths, { fill: 'rgba(0, 180, 140, 0.15)', stroke: '#00b48c', lineWidth: 2, vertices: true, vertexRadius: 3, vertexColor: '#00b48c' });
+      canvas.drawPaths(subjectPaths, { fill: 'rgba(0, 180, 140, 0.15)', stroke: '#00b48c', lineWidth: 2, vertices: true, vertexRadius: 3, vertexColor: '#00b48c', fillRule: canvasFillRule });
     }
     if (showClip) {
-      canvas.drawPaths(clipPaths, { fill: 'rgba(235, 68, 68, 0.15)', stroke: '#eb4444', lineWidth: 2, vertices: true, vertexRadius: 3, vertexColor: '#eb4444' });
+      canvas.drawPaths(clipPaths, { fill: 'rgba(235, 68, 68, 0.15)', stroke: '#eb4444', lineWidth: 2, vertices: true, vertexRadius: 3, vertexColor: '#eb4444', fillRule: canvasFillRule });
     }
     if (showResult && result.length) {
       canvas.drawPaths(result, { fill: 'rgba(37, 99, 235, 0.25)', stroke: '#2563eb', lineWidth: 2.5 });
