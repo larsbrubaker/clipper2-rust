@@ -663,13 +663,17 @@ impl ClipperBase {
                 i += 1;
             }
             if i >= last_vert_idx {
-                return; // degenerate - all same y
-            }
-            going_up = self.vertex_arena[i].pt.y < first_pt.y;
-            if going_up {
+                // Completely horizontal open path - still add as local minimum
+                // so it participates in the sweep line (matches C++ Clipper2 behavior)
                 self.add_loc_min(first_vert_idx, polytype, true);
+                going_up = true;
             } else {
-                self.vertex_arena[first_vert_idx].flags |= VertexFlags::LOCAL_MAX;
+                going_up = self.vertex_arena[i].pt.y < first_pt.y;
+                if going_up {
+                    self.add_loc_min(first_vert_idx, polytype, true);
+                } else {
+                    self.vertex_arena[first_vert_idx].flags |= VertexFlags::LOCAL_MAX;
+                }
             }
         }
 

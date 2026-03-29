@@ -854,3 +854,61 @@ fn test_polygon_case_37_difference_evenodd() {
         total_area as i64
     );
 }
+
+// ============================================================================
+// Issue #3: Open-path intersection returns no results for horizontal paths
+// ============================================================================
+
+#[test]
+fn test_horizontal_open_path_intersection() {
+    // A horizontal open line from (-10, 50) to (110, 50)
+    // clipped against a 100x100 rectangle (0,0)-(100,100)
+    // should return the segment (0, 50) -> (100, 50)
+    let open_subject = vec![vec![Point64::new(-10, 50), Point64::new(110, 50)]];
+    let clip = vec![vec![
+        Point64::new(0, 0),
+        Point64::new(100, 0),
+        Point64::new(100, 100),
+        Point64::new(0, 100),
+    ]];
+
+    let mut c = Clipper64::new();
+    c.add_open_subject(&open_subject);
+    c.add_clip(&clip);
+
+    let mut closed_result = Paths64::new();
+    let mut open_result = Paths64::new();
+    let success = c.execute(
+        ClipType::Intersection,
+        FillRule::EvenOdd,
+        &mut closed_result,
+        Some(&mut open_result),
+    );
+
+    assert!(success, "Clipper execute should succeed");
+    assert_eq!(
+        open_result.len(),
+        1,
+        "Expected 1 open path in result, got {}",
+        open_result.len()
+    );
+
+    let result_path = &open_result[0];
+    assert_eq!(
+        result_path.len(),
+        2,
+        "Expected 2 points in clipped segment, got {}",
+        result_path.len()
+    );
+
+    // The clipped segment should be from (0, 50) to (100, 50)
+    // (order may vary, so check both endpoints are present)
+    let mut pts: Vec<(i64, i64)> = result_path.iter().map(|p| (p.x, p.y)).collect();
+    pts.sort();
+    assert_eq!(
+        pts,
+        vec![(0, 50), (100, 50)],
+        "Expected clipped segment (0,50)-(100,50), got {:?}",
+        pts
+    );
+}
