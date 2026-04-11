@@ -912,3 +912,36 @@ fn test_horizontal_open_path_intersection() {
         pts
     );
 }
+
+// Fix 2: top_x must use nearbyint (banker's rounding) not .round()
+#[test]
+fn test_top_x_bankers_rounding() {
+    // Active with bot=(0,0), top=(1,2), dx=0.5
+    // At current_y=1: bot.x + nearbyint(0.5 * 1) = 0 + nearbyint(0.5) = 0 + 0 = 0
+    // With .round(): 0 + round(0.5) = 0 + 1 = 1 (wrong!)
+    let ae = Active {
+        bot: Point64::new(0, 0),
+        top: Point64::new(1, 2),
+        curr_x: 0,
+        dx: 0.5,
+        wind_dx: 1,
+        wind_cnt: 0,
+        wind_cnt2: 0,
+        outrec: None,
+        prev_in_ael: None,
+        next_in_ael: None,
+        prev_in_sel: None,
+        next_in_sel: None,
+        jump: None,
+        vertex_top: 0,
+        local_min: 0,
+        is_left_bound: false,
+        join_with: JoinWith::NoJoin,
+    };
+    let result = crate::engine_fns::top_x(&ae, 1);
+    assert_eq!(
+        result, 0,
+        "top_x should use banker's rounding: nearbyint(0.5) = 0, got {}",
+        result
+    );
+}

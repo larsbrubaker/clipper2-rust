@@ -68,7 +68,7 @@ pub fn top_x(ae: &Active, current_y: i64) -> i64 {
     } else if current_y == ae.bot.y {
         ae.bot.x
     } else {
-        ae.bot.x + (ae.dx * (current_y - ae.bot.y) as f64).round() as i64
+        ae.bot.x + crate::core::nearbyint_f64(ae.dx * (current_y - ae.bot.y) as f64) as i64
     }
 }
 

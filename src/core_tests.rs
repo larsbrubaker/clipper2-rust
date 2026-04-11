@@ -2167,3 +2167,109 @@ fn test_is_integral() {
     assert!(i64::is_integral());
     assert!(!f64::is_integral());
 }
+
+// Fix 1: point_in_polygon must use i128 cross product to avoid f64 precision loss
+#[test]
+fn test_point_in_polygon_large_coords_i128_precision() {
+    // Polygon: triangle with large coordinates
+    // (0,0) -> (100000000, 100000001) -> (200000000, 0)
+    // Point (1,1) is inside this triangle.
+    // With f64 cross product: edge (0,0)->(100000000,100000001) gives 0.0 for pt=(1,1)
+    //   because f64 can't distinguish the cross product of -1 from 0 at this scale.
+    // With i128 cross product: gives -1, correctly identifying point as not on the edge.
+    let polygon = vec![
+        Point64::new(0, 0),
+        Point64::new(100_000_000, 100_000_001),
+        Point64::new(200_000_000, 0),
+    ];
+    let pt = Point64::new(1, 1);
+    let result = point_in_polygon(pt, &polygon);
+    assert_eq!(
+        result,
+        PointInPolygonResult::IsInside,
+        "Point (1,1) should be inside the triangle, not {:?}",
+        result
+    );
+}
+
+// Fix 2: nearbyint_f64 (banker's rounding)
+#[test]
+fn test_nearbyint_f64_basic() {
+    // Half-to-even (banker's rounding)
+    assert_eq!(nearbyint_f64(0.5), 0.0, "0.5 should round to 0 (even)");
+    assert_eq!(nearbyint_f64(1.5), 2.0, "1.5 should round to 2 (even)");
+    assert_eq!(nearbyint_f64(2.5), 2.0, "2.5 should round to 2 (even)");
+    assert_eq!(nearbyint_f64(3.5), 4.0, "3.5 should round to 4 (even)");
+    assert_eq!(nearbyint_f64(-0.5), 0.0, "-0.5 should round to 0 (even)");
+    assert_eq!(nearbyint_f64(-1.5), -2.0, "-1.5 should round to -2 (even)");
+
+    // Non-half values should round normally
+    assert_eq!(nearbyint_f64(0.3), 0.0);
+    assert_eq!(nearbyint_f64(0.7), 1.0);
+    assert_eq!(nearbyint_f64(-0.3), 0.0);
+    assert_eq!(nearbyint_f64(-0.7), -1.0);
+}
+
+// Fix 3: get_closest_point_on_segment should use nearbyint before adding offset
+#[test]
+fn test_get_closest_point_on_segment_nearbyint() {
+    // seg1=(0,0), seg2=(1,1), off_pt=(0,1)
+    // The closest point on the segment is at parameter q=0.5, so (0.5, 0.5)
+    // C++ (nearbyint): nearbyint(0.5) = 0 -> result (0+0, 0+0) = (0, 0)
+    // Old Rust (.round() of sum): round(0+0.5) = round(0.5) = 1 -> result (1, 1) (wrong!)
+    let seg1 = Point64::new(0, 0);
+    let seg2 = Point64::new(1, 1);
+    let off_pt = Point64::new(0, 1);
+    let result = get_closest_point_on_segment(off_pt, seg1, seg2);
+    assert_eq!(
+        result,
+        Point64::new(0, 0),
+        "Expected (0,0) with banker's rounding, got ({}, {})",
+        result.x,
+        result.y
+    );
+}
+
+// Fix 4: segments_intersect must use parametric algorithm matching C++
+#[test]
+fn test_segments_intersect_parametric_crossing() {
+    // Two crossing segments
+    let seg1a = Point64::new(0, 0);
+    let seg1b = Point64::new(10, 10);
+    let seg2a = Point64::new(0, 10);
+    let seg2b = Point64::new(10, 0);
+    assert!(segments_intersect(seg1a, seg1b, seg2a, seg2b, false));
+    assert!(segments_intersect(seg1a, seg1b, seg2a, seg2b, true));
+}
+
+#[test]
+fn test_segments_intersect_parametric_parallel() {
+    // Parallel segments should return false (cp == 0)
+    let seg1a = Point64::new(0, 0);
+    let seg1b = Point64::new(10, 0);
+    let seg2a = Point64::new(0, 5);
+    let seg2b = Point64::new(10, 5);
+    assert!(!segments_intersect(seg1a, seg1b, seg2a, seg2b, false));
+    assert!(!segments_intersect(seg1a, seg1b, seg2a, seg2b, true));
+}
+
+#[test]
+fn test_segments_intersect_parametric_endpoint_touching() {
+    // Segments that share an endpoint: T-junction
+    // seg1: (0,0)-(10,0), seg2: (5,0)-(5,10)
+    // seg2 starts ON seg1
+    let seg1a = Point64::new(0, 0);
+    let seg1b = Point64::new(10, 0);
+    let seg2a = Point64::new(5, 0);
+    let seg2b = Point64::new(5, 10);
+    // Non-inclusive: endpoint touching should return false
+    assert!(
+        !segments_intersect(seg1a, seg1b, seg2a, seg2b, false),
+        "Non-inclusive should return false for endpoint touching"
+    );
+    // Inclusive: endpoint touching should return true
+    assert!(
+        segments_intersect(seg1a, seg1b, seg2a, seg2b, true),
+        "Inclusive should return true for endpoint touching"
+    );
+}

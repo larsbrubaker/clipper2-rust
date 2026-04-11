@@ -1172,11 +1172,11 @@ pub fn point_in_polygon(pt: Point64, polygon: &Path64) -> PointInPolygonResult {
         } else if pt.x > prev.x && pt.x > curr.x {
             val = 1 - val; // Toggle val
         } else {
-            let d = cross_product_three_points(*prev, *curr, pt);
-            if d == 0.0 {
+            let d = cross_product_sign(*prev, *curr, pt);
+            if d == 0 {
                 return PointInPolygonResult::IsOn;
             }
-            if (d < 0.0) == is_above {
+            if (d < 0) == is_above {
                 val = 1 - val;
             }
         }
@@ -1199,11 +1199,11 @@ pub fn point_in_polygon(pt: Point64, polygon: &Path64) -> PointInPolygonResult {
         };
         let curr = &polygon[curr_idx];
         let prev = &polygon[prev_idx];
-        let d = cross_product_three_points(*prev, *curr, pt);
-        if d == 0.0 {
+        let d = cross_product_sign(*prev, *curr, pt);
+        if d == 0 {
             return PointInPolygonResult::IsOn;
         }
-        if (d < 0.0) == is_above {
+        if (d < 0) == is_above {
             val = 1 - val;
         }
     }
@@ -1500,6 +1500,26 @@ where
     }
 }
 
+/// Banker's rounding (round half to even), matching C++ nearbyint() behavior.
+/// MSRV 1.70 does not have f64::round_ties_even(), so we implement it manually.
+#[inline]
+pub fn nearbyint_f64(x: f64) -> f64 {
+    let trunc = x.trunc();
+    let frac = x - trunc;
+    if frac.abs() < 0.5 {
+        trunc
+    } else if frac.abs() > 0.5 {
+        trunc + frac.signum()
+    } else {
+        // Exactly 0.5: round to nearest even
+        if trunc % 2.0 == 0.0 {
+            trunc
+        } else {
+            trunc + frac.signum()
+        }
+    }
+}
+
 /// Get the sign of a value: -1, 0, or 1
 /// Direct port from clipper.core.h line 996
 #[inline]
@@ -1540,7 +1560,7 @@ pub fn cross_product_sign(pt1: Point64, pt2: Point64, pt3: Point64) -> i32 {
 }
 
 /// Check if two line segments intersect
-/// Direct port from clipper.core.h line 1003
+/// Direct port from clipper.core.h line 1003 - parametric algorithm
 #[inline]
 pub fn segments_intersect(
     seg1a: Point64,
@@ -1549,26 +1569,57 @@ pub fn segments_intersect(
     seg2b: Point64,
     inclusive: bool,
 ) -> bool {
+    let dy1 = (seg1b.y - seg1a.y) as f64;
+    let dx1 = (seg1b.x - seg1a.x) as f64;
+    let dy2 = (seg2b.y - seg2a.y) as f64;
+    let dx2 = (seg2b.x - seg2a.x) as f64;
+    let cp = dy1 * dx2 - dy2 * dx1;
+    if cp == 0.0 {
+        return false; // parallel segments
+    }
+
     if inclusive {
-        let res1 = cross_product_three_points(seg1a, seg2a, seg2b);
-        let res2 = cross_product_three_points(seg1b, seg2a, seg2b);
-        if res1 * res2 > 0.0 {
+        let t = (seg1a.x - seg2a.x) as f64 * dy2 - (seg1a.y - seg2a.y) as f64 * dx2;
+        if t == 0.0 {
+            return true;
+        }
+        if t > 0.0 {
+            if cp < 0.0 || t > cp {
+                return false;
+            }
+        } else if cp > 0.0 || t < cp {
             return false;
         }
-        let res3 = cross_product_three_points(seg2a, seg1a, seg1b);
-        let res4 = cross_product_three_points(seg2b, seg1a, seg1b);
-        if res3 * res4 > 0.0 {
-            return false;
+        let t = (seg1a.x - seg2a.x) as f64 * dy1 - (seg1a.y - seg2a.y) as f64 * dx1;
+        if t == 0.0 {
+            return true;
         }
-        // ensures not collinear
-        res1 != 0.0 || res2 != 0.0 || res3 != 0.0 || res4 != 0.0
+        if t > 0.0 {
+            cp > 0.0 && t <= cp
+        } else {
+            cp < 0.0 && t >= cp
+        }
     } else {
-        (get_sign(&cross_product_three_points(seg1a, seg2a, seg2b))
-            * get_sign(&cross_product_three_points(seg1b, seg2a, seg2b))
-            < 0)
-            && (get_sign(&cross_product_three_points(seg2a, seg1a, seg1b))
-                * get_sign(&cross_product_three_points(seg2b, seg1a, seg1b))
-                < 0)
+        let t = (seg1a.x - seg2a.x) as f64 * dy2 - (seg1a.y - seg2a.y) as f64 * dx2;
+        if t == 0.0 {
+            return false;
+        }
+        if t > 0.0 {
+            if cp < 0.0 || t >= cp {
+                return false;
+            }
+        } else if cp > 0.0 || t <= cp {
+            return false;
+        }
+        let t = (seg1a.x - seg2a.x) as f64 * dy1 - (seg1a.y - seg2a.y) as f64 * dx1;
+        if t == 0.0 {
+            return false;
+        }
+        if t > 0.0 {
+            cp > 0.0 && t < cp
+        } else {
+            cp < 0.0 && t > cp
+        }
     }
 }
 
@@ -1588,9 +1639,17 @@ where
         (off_pt.x.to_f64() - seg1.x.to_f64()) * dx + (off_pt.y.to_f64() - seg1.y.to_f64()) * dy;
     q /= sqr(dx) + sqr(dy);
     q = q.clamp(0.0, 1.0);
-    Point {
-        x: T::from_f64(seg1.x.to_f64() + q * dx),
-        y: T::from_f64(seg1.y.to_f64() + q * dy),
+    if T::is_integral() {
+        // C++ applies nearbyint to q*dx and q*dy before adding to seg1
+        Point {
+            x: T::from_f64(seg1.x.to_f64() + nearbyint_f64(q * dx)),
+            y: T::from_f64(seg1.y.to_f64() + nearbyint_f64(q * dy)),
+        }
+    } else {
+        Point {
+            x: T::from_f64(seg1.x.to_f64() + q * dx),
+            y: T::from_f64(seg1.y.to_f64() + q * dy),
+        }
     }
 }
 

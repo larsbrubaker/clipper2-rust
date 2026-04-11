@@ -68,11 +68,11 @@ fn get_segment_intersection(
     p4: Point64,
     ip: &mut Point64,
 ) -> bool {
-    let res1 = cross_product_three_points(p1, p3, p4);
-    let res2 = cross_product_three_points(p2, p3, p4);
-    if res1 == 0.0 {
+    let res1 = cross_product_sign(p1, p3, p4);
+    let res2 = cross_product_sign(p2, p3, p4);
+    if res1 == 0 {
         *ip = p1;
-        if res2 == 0.0 {
+        if res2 == 0 {
             return false; // segments are collinear
         } else if p1 == p3 || p1 == p4 {
             return true;
@@ -81,7 +81,7 @@ fn get_segment_intersection(
         } else {
             return (p1.y > p3.y) == (p1.y < p4.y);
         }
-    } else if res2 == 0.0 {
+    } else if res2 == 0 {
         *ip = p2;
         if p2 == p3 || p2 == p4 {
             return true;
@@ -91,13 +91,13 @@ fn get_segment_intersection(
             return (p2.y > p3.y) == (p2.y < p4.y);
         }
     }
-    if (res1 > 0.0) == (res2 > 0.0) {
+    if (res1 > 0) == (res2 > 0) {
         return false;
     }
 
-    let res3 = cross_product_three_points(p3, p1, p2);
-    let res4 = cross_product_three_points(p4, p1, p2);
-    if res3 == 0.0 {
+    let res3 = cross_product_sign(p3, p1, p2);
+    let res4 = cross_product_sign(p4, p1, p2);
+    if res3 == 0 {
         *ip = p3;
         if p3 == p1 || p3 == p2 {
             return true;
@@ -106,7 +106,7 @@ fn get_segment_intersection(
         } else {
             return (p3.y > p1.y) == (p3.y < p2.y);
         }
-    } else if res4 == 0.0 {
+    } else if res4 == 0 {
         *ip = p4;
         if p4 == p1 || p4 == p2 {
             return true;
@@ -116,7 +116,7 @@ fn get_segment_intersection(
             return (p4.y > p1.y) == (p4.y < p2.y);
         }
     }
-    if (res3 > 0.0) == (res4 > 0.0) {
+    if (res3 > 0) == (res4 > 0) {
         return false;
     }
 

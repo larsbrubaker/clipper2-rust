@@ -386,3 +386,40 @@ fn test_rectclip64_triangle_touching_corner_should_be_empty() {
         result
     );
 }
+
+// Fix 5: get_segment_intersection must use i128 cross_product_sign, not f64 cross_product
+#[test]
+fn test_get_segment_intersection_large_coords_i128() {
+    // Test with large coordinates where f64 loses precision.
+    // p1=(0,0), p2=(1,1) segment, p3=(0,0), p4=(100000000,100000001) segment
+    // cross_product_three_points(p2, p3, p4) with f64 gives 0.0 (wrong, should be -1)
+    // cross_product_sign(p2, p3, p4) with i128 gives -1 (correct)
+    //
+    // We test this through the public RectClip64 API since get_segment_intersection is private.
+    // We construct a scenario where a polygon edge has large coordinates and clips against a rect.
+    // The rect is (0,0)-(100000000,100000001) and the polygon crosses the rect boundary.
+    //
+    // Simpler approach: test that rect clipping works correctly with large coordinate polygons.
+    let rect = Rect64::new(0, 0, 50_000_000, 50_000_001);
+    let mut rc = RectClip64::new(rect);
+    // A large triangle that extends beyond the rect
+    let polygon = vec![
+        Point64::new(-1, -1),
+        Point64::new(100_000_000, 100_000_001),
+        Point64::new(100_000_000, -1),
+    ];
+    let result = rc.execute(&vec![polygon]);
+    // The triangle should clip against the rect and produce a non-empty result
+    assert!(
+        !result.is_empty(),
+        "Rect clipping with large coordinates should produce a non-empty result"
+    );
+    // Verify the result has reasonable area (not degenerate)
+    for path in &result {
+        assert!(
+            path.len() >= 3,
+            "Clipped polygon should have at least 3 vertices, got {}",
+            path.len()
+        );
+    }
+}
