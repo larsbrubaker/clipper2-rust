@@ -7,6 +7,8 @@ A Polygon <a href="https://en.wikipedia.org/wiki/Clipping_(computer_graphics)">C
 [![License](https://img.shields.io/badge/License-Boost_1.0-lightblue.svg)](https://www.boost.org/LICENSE_1_0.txt)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Interactive-blue)](https://larsbrubaker.github.io/clipper2-rust/)
 
+> Part of the [rust-apps](https://github.com/larsbrubaker/rust-apps) suite — a collection of Rust graphics and geometry libraries by Lars Brubaker.
+
 ## Interactive Demo
 
 **[Try it in your browser — no installation required](https://larsbrubaker.github.io/clipper2-rust/)**
