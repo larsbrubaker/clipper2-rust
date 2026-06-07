@@ -515,6 +515,53 @@ fn test_poly_tree_to_paths64() {
 }
 
 #[test]
+fn test_poly_tree_to_faces64_groups_immediate_holes() {
+    let mut tree = PolyTree64::new();
+    let outer = square_64(0, 0, 100);
+    let hole = square_64(0, 0, 50);
+    let island = square_64(0, 0, 25);
+
+    let outer_idx = tree.add_child(0, outer.clone());
+    let hole_idx = tree.add_child(outer_idx, hole.clone());
+    let island_idx = tree.add_child(hole_idx, island.clone());
+
+    let faces = poly_tree_to_faces64(&tree);
+
+    assert_eq!(faces.len(), 2);
+    assert_eq!(faces[0].node_index, outer_idx);
+    assert_eq!(faces[0].depth, 1);
+    assert_eq!(faces[0].outer, outer);
+    assert_eq!(faces[0].holes, vec![hole]);
+    assert_eq!(faces[0].hole_node_indices, vec![hole_idx]);
+    assert_eq!(faces[1].node_index, island_idx);
+    assert_eq!(faces[1].depth, 3);
+    assert_eq!(faces[1].outer, island);
+    assert!(faces[1].holes.is_empty());
+    assert!(faces[1].hole_node_indices.is_empty());
+}
+
+#[test]
+fn test_boolean_tree_to_faces64_difference_has_one_hole() {
+    let subjects = vec![square_64(0, 0, 100)];
+    let clips = vec![square_64(0, 0, 50)];
+    let mut tree = PolyTree64::new();
+    boolean_op_tree_64(
+        ClipType::Difference,
+        FillRule::NonZero,
+        &subjects,
+        &clips,
+        &mut tree,
+    );
+
+    let faces = poly_tree_to_faces64(&tree);
+
+    assert_eq!(faces.len(), 1);
+    assert_eq!(faces[0].holes.len(), 1);
+    assert!(!faces[0].outer.is_empty());
+    assert!(!faces[0].holes[0].is_empty());
+}
+
+#[test]
 fn test_poly_tree_to_paths_d_empty() {
     let tree = PolyTreeD::new();
     let result = poly_tree_to_paths_d(&tree);
