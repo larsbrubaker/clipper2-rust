@@ -424,28 +424,6 @@ pub struct PolyFace64 {
     pub hole_node_indices: Vec<usize>,
 }
 
-fn poly_tree_node_level(tree: &PolyTree64, node_idx: usize) -> Option<u32> {
-    let mut level = 0u32;
-    let mut parent = tree.nodes.get(node_idx)?.parent();
-    let mut visited = 0usize;
-
-    while let Some(parent_idx) = parent {
-        visited += 1;
-        if visited > tree.nodes.len() {
-            return None;
-        }
-        level += 1;
-        parent = tree.nodes.get(parent_idx)?.parent();
-    }
-
-    Some(level)
-}
-
-fn poly_tree_node_is_hole(tree: &PolyTree64, node_idx: usize) -> Option<bool> {
-    let level = poly_tree_node_level(tree, node_idx)?;
-    Some(level > 0 && (level & 1) == 0)
-}
-
 /// Helper: recursively collect paths from a PolyPath64 node.
 fn poly_path_to_paths64(tree: &PolyTree64, node_idx: usize, paths: &mut Paths64) {
     let polygon = tree.nodes[node_idx].polygon().clone();
@@ -479,39 +457,31 @@ pub fn poly_tree_to_paths64(polytree: &PolyTree64) -> Paths64 {
     result
 }
 
+/// Helper: recursively collect solid faces from a PolyPath64 node.
 fn poly_path_to_faces64(tree: &PolyTree64, node_idx: usize, faces: &mut Vec<PolyFace64>) {
-    let Some(node) = tree.nodes.get(node_idx) else {
-        return;
-    };
+    let node = &tree.nodes[node_idx];
 
-    if !node.polygon().is_empty() && matches!(poly_tree_node_is_hole(tree, node_idx), Some(false)) {
+    if !node.polygon().is_empty() && !tree.is_hole(node_idx) {
         let mut holes = Paths64::new();
         let mut hole_node_indices = Vec::new();
-        for child_idx in node.children().iter().copied() {
-            if !matches!(poly_tree_node_is_hole(tree, child_idx), Some(true)) {
-                continue;
+        for &child_idx in node.children() {
+            let child = &tree.nodes[child_idx];
+            if tree.is_hole(child_idx) && !child.polygon().is_empty() {
+                holes.push(child.polygon().clone());
+                hole_node_indices.push(child_idx);
             }
-            let Some(child_node) = tree.nodes.get(child_idx) else {
-                continue;
-            };
-            if child_node.polygon().is_empty() {
-                continue;
-            }
-            holes.push(child_node.polygon().clone());
-            hole_node_indices.push(child_idx);
         }
 
         faces.push(PolyFace64 {
             node_index: node_idx,
-            depth: poly_tree_node_level(tree, node_idx).unwrap_or(0),
+            depth: tree.level(node_idx),
             outer: node.polygon().clone(),
             holes,
             hole_node_indices,
         });
     }
 
-    let children: Vec<usize> = node.children().to_vec();
-    for child_idx in children {
+    for &child_idx in node.children() {
         poly_path_to_faces64(tree, child_idx, faces);
     }
 }
@@ -524,15 +494,10 @@ fn poly_path_to_faces64(tree: &PolyTree64, node_idx: usize, faces: &mut Vec<Poly
 #[must_use]
 pub fn poly_tree_to_faces64(polytree: &PolyTree64) -> Vec<PolyFace64> {
     let mut result = Vec::new();
-    let Some(root) = polytree.nodes.first() else {
-        return result;
-    };
-
-    let root_children: Vec<usize> = root.children().to_vec();
-    for child_idx in root_children {
+    let root = &polytree.nodes[0];
+    for &child_idx in root.children() {
         poly_path_to_faces64(polytree, child_idx, &mut result);
     }
-
     result
 }
 
