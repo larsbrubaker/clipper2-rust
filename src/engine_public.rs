@@ -287,6 +287,11 @@ impl Clipper64 {
         }
     }
 
+    #[cfg(feature = "using_z")]
+    pub fn set_z_callback(&mut self, cb: ZCallback64) {
+        self.base.z_callback = Some(cb);
+    }
+
     /// Add subject paths
     pub fn add_subject(&mut self, subjects: &Paths64) {
         self.base.add_paths(subjects, PathType::Subject, false);
@@ -471,6 +476,8 @@ pub struct ClipperD {
     pub base: ClipperBase,
     scale: f64,
     inv_scale: f64,
+    #[cfg(feature = "using_z")]
+    z_callbackd: Option<ZCallbackD>,
 }
 
 impl ClipperD {
@@ -490,6 +497,8 @@ impl ClipperD {
             base,
             scale,
             inv_scale,
+            #[cfg(feature = "using_z")]
+            z_callbackd: None,
         }
     }
 
@@ -499,6 +508,47 @@ impl ClipperD {
 
     pub fn inv_scale(&self) -> f64 {
         self.inv_scale
+    }
+
+    #[cfg(feature = "using_z")]
+    pub fn set_z_callback(&mut self, cb: ZCallbackD) {
+        self.z_callbackd = Some(cb);
+    }
+
+    #[cfg(feature = "using_z")]
+    pub fn zcb(
+        &self,
+        e1bot: &Point64,
+        e1top: &Point64,
+        e2bot: &Point64,
+        e2top: &Point64,
+        pt: &mut Point64,
+    ) {
+        // de-scale (x & y)
+        // temporarily convert integers to their initial float values
+        // this will slow clipping marginally but will make it much easier
+        // to understand the coordinates passed to the callback function
+        let mut tmp = PointD::from(pt as &Point64).scale(self.inv_scale);
+        let e1b = PointD::from(e1bot).scale(self.inv_scale);
+        let e1t = PointD::from(e1top).scale(self.inv_scale);
+        let e2b = PointD::from(e2bot).scale(self.inv_scale);
+        let e2t = PointD::from(e2top).scale(self.inv_scale);
+        self.z_callbackd.unwrap()(&e1b, &e1t, &e2b, &e2t, &mut tmp);
+        pt.z = tmp.z; // only update 'z'
+    }
+
+    #[cfg(feature = "using_z")]
+    pub fn check_callback(&mut self) {
+        if self.z_callbackd.is_some() {
+            // if the user defined float point callback has been assigned
+            // then assign the proxy callback function
+            // ClipperBase::zCallback_ =
+            // 	std::bind(&ClipperD::ZCB, this, std::placeholders::_1,
+            // 	std::placeholders::_2, std::placeholders::_3,
+            // 	std::placeholders::_4, std::placeholders::_5);
+        } else {
+            self.base.z_callback = None;
+        }
     }
 
     /// Add subject paths (double precision)
@@ -558,6 +608,9 @@ impl ClipperD {
         solution_closed: &mut PathsD,
         mut solution_open: Option<&mut PathsD>,
     ) -> bool {
+        #[cfg(feature = "using_z")]
+        self.check_callback();
+
         solution_closed.clear();
         if let Some(ref mut open) = solution_open {
             open.clear();
@@ -578,6 +631,9 @@ impl ClipperD {
         polytree: &mut PolyTreeD,
         open_paths: &mut PathsD,
     ) -> bool {
+        #[cfg(feature = "using_z")]
+        self.check_callback();
+
         polytree.clear();
         open_paths.clear();
 

@@ -17,6 +17,11 @@ keywords = ["polygon", "clipping", "geometry", "offsetting", "2d"]
 categories = ["algorithms", "graphics", "mathematics"]
 exclude = ["demo/", "docs/", "Tests/", ".github/", ".claude/", "benches/", "scripts/", "CLAUDE.md", "nul"]
 
+[features]
+default = [ ]
+
+using_z = []
+
 [lib]
 name = "clipper2_rust"
 path = "src/lib.rs"
