@@ -1742,6 +1742,24 @@ where
     sqr(a * d - c * b) / (c * c + d * d)
 }
 
+pub fn ellipse_rect64(rect: &Rect64, steps: usize) -> Path64 {
+    return ellipse_point64(
+        rect.mid_point(),
+        rect.width() as f64 * 0.5,
+        rect.height() as f64 * 0.5,
+        steps,
+    );
+}
+
+pub fn ellipse_rect_d(rect: &RectD, steps: usize) -> PathD {
+    return ellipse_point_d(
+        rect.mid_point(),
+        rect.width() as f64 * 0.5,
+        rect.height() as f64 * 0.5,
+        steps,
+    );
+}
+
 /// Generate an elliptical path around a center point
 /// Direct port from clipper.h line 613 (Ellipse template function)
 pub fn ellipse_point64(center: Point64, radius_x: f64, radius_y: f64, steps: usize) -> Path64 {
