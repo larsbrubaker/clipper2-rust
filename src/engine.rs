@@ -8,6 +8,7 @@ use crate::core::*;
 use crate::engine_fns::*;
 use crate::engine_public::PolyTree64;
 use std::collections::BinaryHeap;
+use std::marker::PhantomData;
 
 // ============================================================================
 // Sentinel value for null indices in arena-based structures
@@ -340,10 +341,14 @@ impl Default for HorzJoin {
 }
 
 #[cfg(feature = "using_z")]
-pub type ZCallback64 = fn(&Point64, &Point64, &Point64, &Point64, &mut Point64);
+pub trait ZCallback64Trait: FnMut(&Point64, &Point64, &Point64, &Point64, &mut Point64) {}
+#[cfg(feature = "using_z")]
+impl<T: FnMut(&Point64, &Point64, &Point64, &Point64, &mut Point64)> ZCallback64Trait for T {}
 
 #[cfg(feature = "using_z")]
-pub type ZCallbackD = fn(&PointD, &PointD, &PointD, &PointD, &mut PointD);
+pub trait ZCallbackDTrait: FnMut(&PointD, &PointD, &PointD, &PointD, &mut PointD) {}
+#[cfg(feature = "using_z")]
+impl<T: FnMut(&PointD, &PointD, &PointD, &PointD, &mut PointD)> ZCallbackDTrait for T {}
 
 // ============================================================================
 // ClipperBase - Main clipping engine struct
@@ -352,7 +357,7 @@ pub type ZCallbackD = fn(&PointD, &PointD, &PointD, &PointD, &mut PointD);
 
 /// Main clipping engine. Manages all arenas and the sweep-line algorithm state.
 /// Direct port from clipper.engine.h line 192
-pub struct ClipperBase {
+pub struct ClipperBase<'a> {
     // Configuration
     pub cliptype: ClipType,
     pub fillrule: FillRule,
@@ -391,12 +396,16 @@ pub struct ClipperBase {
     pub horz_join_list: Vec<HorzJoin>,
 
     #[cfg(feature = "using_z")]
-    pub z_callback: Option<ZCallback64>,
+    pub(crate) z_callback: Option<Box<dyn ZCallback64Trait + 'a>>,
+
     #[cfg(feature = "using_z")]
     pub default_z: i64,
+
+    // Required or else compiler complains about not using 'a when building without z
+    phantom: PhantomData<&'a u32>,
 }
 
-impl ClipperBase {
+impl<'a> ClipperBase<'a> {
     pub fn new() -> Self {
         Self {
             cliptype: ClipType::NoClip,
@@ -427,6 +436,8 @@ impl ClipperBase {
             z_callback: None,
             #[cfg(feature = "using_z")]
             default_z: 0,
+
+            phantom: PhantomData,
         }
     }
 
@@ -974,7 +985,7 @@ impl ClipperBase {
     }
 }
 
-impl Default for ClipperBase {
+impl<'a> Default for ClipperBase<'a> {
     fn default() -> Self {
         Self::new()
     }
@@ -985,7 +996,7 @@ impl Default for ClipperBase {
 // Direct port from clipper.engine.cpp
 // ============================================================================
 
-impl ClipperBase {
+impl<'a> ClipperBase<'a> {
     // ---- Helper methods for arena-based access ----
 
     /// Check if an active edge is part of an open path
@@ -1054,7 +1065,7 @@ impl ClipperBase {
 
     #[cfg(feature = "using_z")]
     pub fn set_z(&mut self, e1_idx: usize, e2_idx: usize, ip_idx: usize) {
-        let Some(z_callback) = self.z_callback.as_ref() else {
+        if self.z_callback.is_none() {
             return;
         };
         let e1 = &self.active_arena[e1_idx];
@@ -1074,7 +1085,7 @@ impl ClipperBase {
             } else {
                 ip.z = self.default_z;
             }
-            z_callback(&e1.bot, &e1.top, &e2.bot, &e2.top, ip);
+            self.z_callback.as_mut().unwrap()(&e1.bot, &e1.top, &e2.bot, &e2.top, ip);
         } else {
             let ip = &mut self.outpt_arena[ip_idx].pt;
             if *ip == e2.bot {
@@ -1088,7 +1099,7 @@ impl ClipperBase {
             } else {
                 ip.z = self.default_z;
             }
-            z_callback(&e2.bot, &e2.top, &e1.bot, &e1.top, ip);
+            self.z_callback.as_mut().unwrap()(&e2.bot, &e2.top, &e1.bot, &e1.top, ip);
         }
     }
 
@@ -3279,7 +3290,7 @@ impl ClipperBase {
         );
 
         #[cfg(feature = "using_z")]
-        if let Some(z_cb) = self.z_callback {
+        if let Some(z_cb) = &mut self.z_callback {
             let oa = &self.outpt_arena;
             z_cb(
                 &oa[prev_op].pt,
