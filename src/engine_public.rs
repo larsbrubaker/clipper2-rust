@@ -276,11 +276,11 @@ impl Default for PolyTreeD {
 
 /// Main integer-coordinate polygon clipper
 /// Direct port from clipper.engine.h line 459
-pub struct Clipper64<'a> {
-    pub base: ClipperBase<'a>,
+pub struct Clipper64 {
+    pub base: ClipperBase,
 }
 
-impl<'a> Clipper64<'a> {
+impl Clipper64 {
     pub fn new() -> Self {
         Self {
             base: ClipperBase::new(),
@@ -288,7 +288,7 @@ impl<'a> Clipper64<'a> {
     }
 
     #[cfg(feature = "using_z")]
-    pub fn set_z_callback(&mut self, cb: impl ZCallback64Trait + 'a) {
+    pub fn set_z_callback(&mut self, cb: impl ZCallback64Trait + 'static) {
         self.base.z_callback = Some(Box::new(cb));
     }
 
@@ -464,7 +464,7 @@ impl<'a> Clipper64<'a> {
     }
 }
 
-impl<'a> Default for Clipper64<'a> {
+impl Default for Clipper64 {
     fn default() -> Self {
         Self::new()
     }
@@ -472,13 +472,13 @@ impl<'a> Default for Clipper64<'a> {
 
 /// Double-precision polygon clipper that scales to int64 internally
 /// Direct port from clipper.engine.h line 520
-pub struct ClipperD<'a> {
-    pub base: ClipperBase<'a>,
+pub struct ClipperD {
+    pub base: ClipperBase,
     scale: f64,
     inv_scale: f64,
 }
 
-impl<'a> ClipperD<'a> {
+impl ClipperD {
     pub fn new(precision: i32) -> Self {
         let mut prec = precision;
         let mut error_code = 0;
@@ -507,7 +507,7 @@ impl<'a> ClipperD<'a> {
     }
 
     #[cfg(feature = "using_z")]
-    pub fn set_z_callback(&mut self, mut cb: impl ZCallbackDTrait + 'a) {
+    pub fn set_z_callback(&mut self, mut cb: impl ZCallbackDTrait + 'static) {
         let inv_scale = self.inv_scale;
         self.base.z_callback = Some(Box::new(move |e1bot, e1top, e2bot, e2top, pt| {
             // de-scale (x & y)

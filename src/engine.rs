@@ -8,7 +8,6 @@ use crate::core::*;
 use crate::engine_fns::*;
 use crate::engine_public::PolyTree64;
 use std::collections::BinaryHeap;
-use std::marker::PhantomData;
 
 // ============================================================================
 // Sentinel value for null indices in arena-based structures
@@ -357,7 +356,7 @@ impl<T: FnMut(&PointD, &PointD, &PointD, &PointD, &mut PointD)> ZCallbackDTrait 
 
 /// Main clipping engine. Manages all arenas and the sweep-line algorithm state.
 /// Direct port from clipper.engine.h line 192
-pub struct ClipperBase<'a> {
+pub struct ClipperBase {
     // Configuration
     pub cliptype: ClipType,
     pub fillrule: FillRule,
@@ -396,16 +395,13 @@ pub struct ClipperBase<'a> {
     pub horz_join_list: Vec<HorzJoin>,
 
     #[cfg(feature = "using_z")]
-    pub(crate) z_callback: Option<Box<dyn ZCallback64Trait + 'a>>,
+    pub(crate) z_callback: Option<Box<dyn ZCallback64Trait + 'static>>,
 
     #[cfg(feature = "using_z")]
     pub default_z: i64,
-
-    // Required or else compiler complains about not using 'a when building without z
-    phantom: PhantomData<&'a u32>,
 }
 
-impl<'a> ClipperBase<'a> {
+impl ClipperBase {
     pub fn new() -> Self {
         Self {
             cliptype: ClipType::NoClip,
@@ -436,8 +432,6 @@ impl<'a> ClipperBase<'a> {
             z_callback: None,
             #[cfg(feature = "using_z")]
             default_z: 0,
-
-            phantom: PhantomData,
         }
     }
 
@@ -985,7 +979,7 @@ impl<'a> ClipperBase<'a> {
     }
 }
 
-impl<'a> Default for ClipperBase<'a> {
+impl Default for ClipperBase {
     fn default() -> Self {
         Self::new()
     }
@@ -996,7 +990,7 @@ impl<'a> Default for ClipperBase<'a> {
 // Direct port from clipper.engine.cpp
 // ============================================================================
 
-impl<'a> ClipperBase<'a> {
+impl ClipperBase {
     // ---- Helper methods for arena-based access ----
 
     /// Check if an active edge is part of an open path
