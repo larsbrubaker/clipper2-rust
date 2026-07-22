@@ -34,7 +34,7 @@ If you find it useful, here are a few ways to help keep development going:
 
 This port is **feature-complete** — all core algorithms have been ported and verified against the original C++ implementation.
 
-- **444 tests** (392 unit + 52 integration), all passing, 0 ignored
+- **456 tests** (403 unit + 53 integration), all passing, 0 ignored
 - **Exact behavioral match** with C++ on all test cases, including edge cases from 20+ GitHub issues
 - **4 examples** demonstrating clipping, offsetting, rectangle clipping, and benchmarking
 - **6 Criterion benchmarks** covering boolean ops, offsetting, rect clipping, and simplification
@@ -56,6 +56,7 @@ This port was created by [MatterHackers](https://www.matterhackers.com) using [C
 - **Path Simplification**: Reduce polygon complexity while preserving shape (Ramer-Douglas-Peucker)
 - **Multiple Precision**: Integer (`i64`) and floating-point (`f64`) coordinate support
 - **PolyTree Structure**: Hierarchical representation of polygon parent/child/hole relationships
+- **Face Extraction**: `poly_tree_to_faces64` flattens a `PolyTree64` into `PolyFace64` solid faces, each owning its immediate holes
 - **SVG Output**: Built-in SVG writer for visualization and debugging
 - **100% Safe Rust**: Zero `unsafe` blocks — enforced at compile time with `#![forbid(unsafe_code)]`
 
@@ -88,7 +89,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-clipper2-rust = "1.0"
+clipper2-rust = "1.1"
 ```
 
 ### Boolean Operations
