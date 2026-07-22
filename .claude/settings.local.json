@@ -68,7 +68,8 @@
       "Bash(taskkill:*)",
       "Bash(PORT=3001 bun run:*)",
       "Bash(curl:*)",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "Bash(gh pr view:*)"
     ],
     "deny": []
   }
