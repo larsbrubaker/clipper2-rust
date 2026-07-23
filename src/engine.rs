@@ -1937,17 +1937,12 @@ impl ClipperBase {
                     }
                 }
             }
-            #[cfg(feature = "using_z")]
-            let result_op: usize;
+
+            let _result_op: usize;
 
             // toggle contribution
             if is_hot_edge(&self.active_arena[edge_o]) {
-                #[cfg(feature = "using_z")]
-                {
-                    result_op = self.add_out_pt(edge_o, pt);
-                }
-                #[cfg(not(feature = "using_z"))]
-                self.add_out_pt(edge_o, pt);
+                _result_op = self.add_out_pt(edge_o, pt);
                 if self.is_front(edge_o) {
                     let or = self.active_arena[edge_o].outrec.unwrap();
                     self.outrec_list[or].front_edge = None;
@@ -1979,23 +1974,13 @@ impl ClipperBase {
                         return;
                     }
                 }
-                #[cfg(feature = "using_z")]
-                {
-                    result_op = self.start_open_path(edge_o, pt);
-                }
-                #[cfg(not(feature = "using_z"))]
-                self.start_open_path(edge_o, pt);
+                _result_op = self.start_open_path(edge_o, pt);
             } else {
-                #[cfg(feature = "using_z")]
-                {
-                    result_op = self.start_open_path(edge_o, pt);
-                }
-                #[cfg(not(feature = "using_z"))]
-                self.start_open_path(edge_o, pt);
+                _result_op = self.start_open_path(edge_o, pt);
             }
             #[cfg(feature = "using_z")]
             if self.z_callback.is_some() {
-                self.set_z(edge_o, edge_c, result_op);
+                self.set_z(edge_o, edge_c, _result_op);
             }
             return;
         }
@@ -2070,83 +2055,64 @@ impl ClipperBase {
         }
 
         // NOW PROCESS THE INTERSECTION
-        #[cfg(feature = "using_z")]
-        let mut result_op: Option<usize>;
+        let mut _result_op: Option<usize>;
         if is_hot_edge(&self.active_arena[e1_idx]) && is_hot_edge(&self.active_arena[e2_idx]) {
             if (old_e1_windcnt != 0 && old_e1_windcnt != 1)
                 || (old_e2_windcnt != 0 && old_e2_windcnt != 1)
                 || (!self.is_same_poly_type_idx(e1_idx, e2_idx) && self.cliptype != ClipType::Xor)
             {
+                _result_op = self.add_local_max_poly(e1_idx, e2_idx, pt);
                 #[cfg(feature = "using_z")]
-                {
-                    result_op = self.add_local_max_poly(e1_idx, e2_idx, pt);
-                    if self.z_callback.is_some() {
-                        if let Some(res_op) = result_op {
-                            self.set_z(e1_idx, e2_idx, res_op);
-                        }
+                if self.z_callback.is_some() {
+                    if let Some(res_op) = _result_op {
+                        self.set_z(e1_idx, e2_idx, res_op);
                     }
                 }
-                #[cfg(not(feature = "using_z"))]
-                self.add_local_max_poly(e1_idx, e2_idx, pt);
             } else if self.is_front(e1_idx)
                 || self.active_arena[e1_idx].outrec == self.active_arena[e2_idx].outrec
             {
+                _result_op = self.add_local_max_poly(e1_idx, e2_idx, pt);
+                let _op2 = self.add_local_min_poly(e1_idx, e2_idx, pt, false);
                 #[cfg(feature = "using_z")]
                 {
-                    result_op = self.add_local_max_poly(e1_idx, e2_idx, pt);
-                    let op2 = self.add_local_min_poly(e1_idx, e2_idx, pt, false);
                     if self.z_callback.is_some() {
-                        if let Some(res_op) = result_op {
+                        if let Some(res_op) = _result_op {
                             self.set_z(e1_idx, e2_idx, res_op);
                         }
                     }
                     if self.z_callback.is_some() {
-                        self.set_z(e1_idx, e2_idx, op2);
+                        self.set_z(e1_idx, e2_idx, _op2);
                     }
-                }
-                #[cfg(not(feature = "using_z"))]
-                {
-                    self.add_local_max_poly(e1_idx, e2_idx, pt);
-                    self.add_local_min_poly(e1_idx, e2_idx, pt, false);
                 }
             } else {
+                _result_op = Some(self.add_out_pt(e1_idx, pt));
+                let _op2 = self.add_out_pt(e2_idx, pt);
                 #[cfg(feature = "using_z")]
                 {
-                    result_op = Some(self.add_out_pt(e1_idx, pt));
-                    let op2 = self.add_out_pt(e2_idx, pt);
                     if self.z_callback.is_some() {
-                        self.set_z(e1_idx, e2_idx, result_op.unwrap());
-                        self.set_z(e1_idx, e2_idx, op2);
+                        self.set_z(e1_idx, e2_idx, _result_op.unwrap());
+                        self.set_z(e1_idx, e2_idx, _op2);
                     }
-                }
-                #[cfg(not(feature = "using_z"))]
-                {
-                    self.add_out_pt(e1_idx, pt);
-                    self.add_out_pt(e2_idx, pt);
                 }
                 self.swap_outrecs(e1_idx, e2_idx);
             }
         } else if is_hot_edge(&self.active_arena[e1_idx]) {
+            _result_op = Some(self.add_out_pt(e1_idx, pt));
             #[cfg(feature = "using_z")]
             {
-                result_op = Some(self.add_out_pt(e1_idx, pt));
                 if self.z_callback.is_some() {
-                    self.set_z(e1_idx, e2_idx, result_op.unwrap());
+                    self.set_z(e1_idx, e2_idx, _result_op.unwrap());
                 }
             }
-            #[cfg(not(feature = "using_z"))]
-            self.add_out_pt(e1_idx, pt);
             self.swap_outrecs(e1_idx, e2_idx);
         } else if is_hot_edge(&self.active_arena[e2_idx]) {
+            _result_op = Some(self.add_out_pt(e2_idx, pt));
             #[cfg(feature = "using_z")]
             {
-                result_op = Some(self.add_out_pt(e2_idx, pt));
                 if self.z_callback.is_some() {
-                    self.set_z(e1_idx, e2_idx, result_op.unwrap());
+                    self.set_z(e1_idx, e2_idx, _result_op.unwrap());
                 }
             }
-            #[cfg(not(feature = "using_z"))]
-            self.add_out_pt(e2_idx, pt);
             self.swap_outrecs(e1_idx, e2_idx);
         } else {
             // neither edge is hot
@@ -2169,30 +2135,22 @@ impl ClipperBase {
             }
 
             if !self.is_same_poly_type_idx(e1_idx, e2_idx) {
+                _result_op = Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
                 #[cfg(feature = "using_z")]
                 {
-                    result_op = Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
                     if self.z_callback.is_some() {
-                        self.set_z(e1_idx, e2_idx, result_op.unwrap());
+                        self.set_z(e1_idx, e2_idx, _result_op.unwrap());
                     }
                 }
-                #[cfg(not(feature = "using_z"))]
-                self.add_local_min_poly(e1_idx, e2_idx, pt, false);
             } else if old_e1_windcnt == 1 && old_e2_windcnt == 1 {
                 #[cfg(feature = "using_z")]
                 {
-                    result_op = None;
+                    _result_op = None;
                 }
                 match self.cliptype {
                     ClipType::Union => {
                         if e1wc2 <= 0 && e2wc2 <= 0 {
-                            #[cfg(feature = "using_z")]
-                            {
-                                result_op =
-                                    Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
-                            }
-                            #[cfg(not(feature = "using_z"))]
-                            self.add_local_min_poly(e1_idx, e2_idx, pt, false);
+                            _result_op = Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
                         }
                     }
                     ClipType::Difference => {
@@ -2203,13 +2161,7 @@ impl ClipperBase {
                                 && e1wc2 <= 0
                                 && e2wc2 <= 0)
                         {
-                            #[cfg(feature = "using_z")]
-                            {
-                                result_op =
-                                    Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
-                            }
-                            #[cfg(not(feature = "using_z"))]
-                            self.add_local_min_poly(e1_idx, e2_idx, pt, false);
+                            _result_op = Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
                         }
                     }
                     ClipType::Xor => {
@@ -2218,18 +2170,12 @@ impl ClipperBase {
                     _ => {
                         // Intersection
                         if e1wc2 > 0 && e2wc2 > 0 {
-                            #[cfg(feature = "using_z")]
-                            {
-                                result_op =
-                                    Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
-                            }
-                            #[cfg(not(feature = "using_z"))]
-                            self.add_local_min_poly(e1_idx, e2_idx, pt, false);
+                            _result_op = Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
                         }
                     }
                 }
                 #[cfg(feature = "using_z")]
-                if let Some(result_op) = result_op {
+                if let Some(result_op) = _result_op {
                     if self.z_callback.is_some() {
                         self.set_z(e1_idx, e2_idx, result_op);
                     }
