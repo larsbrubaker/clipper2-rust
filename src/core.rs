@@ -129,13 +129,22 @@ type ZType = i64;
 
 /// 2D point with generic numeric type
 /// Direct port from clipper.core.h line 117
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
 pub struct Point<T> {
     pub x: T,
     pub y: T,
     #[cfg(feature = "using_z")]
     pub z: ZType,
+}
+
+impl<T> PartialEq for Point<T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
 }
 
 impl<T> Point<T>
@@ -185,7 +194,7 @@ where
             x: self.x + other.x,
             y: self.y + other.y,
             #[cfg(feature = "using_z")]
-            z: self.z,
+            z: 0,
         }
     }
 
@@ -195,7 +204,7 @@ where
             x: self.x - other.x,
             y: self.y - other.y,
             #[cfg(feature = "using_z")]
-            z: self.z,
+            z: 0,
         }
     }
 
@@ -205,7 +214,7 @@ where
             x: T::zero() - self.x,
             y: T::zero() - self.y,
             #[cfg(feature = "using_z")]
-            z: self.z,
+            z: 0,
         }
     }
 }
