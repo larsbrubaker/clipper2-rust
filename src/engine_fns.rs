@@ -766,10 +766,12 @@ pub fn build_path_d_from_outpt(
         let op_next = outpt_arena[op_start].next;
         last_pt = outpt_arena[op_next].pt;
         op2 = outpt_arena[op_next].next;
-        path.push(PointD::new(
-            last_pt.x as f64 * inv_scale,
-            last_pt.y as f64 * inv_scale,
-        ));
+        path.push(PointD {
+            x: last_pt.x as f64 * inv_scale,
+            y: last_pt.y as f64 * inv_scale,
+            #[cfg(feature = "using_z")]
+            z: last_pt.z,
+        });
         while op2 != outpt_arena[op_start].next {
             if outpt_arena[op2].pt != last_pt {
                 last_pt = outpt_arena[op2].pt;
@@ -798,10 +800,12 @@ pub fn build_path_d_from_outpt(
     while op2 != op_start {
         if outpt_arena[op2].pt != last_pt {
             last_pt = outpt_arena[op2].pt;
-            path.push(PointD::new(
-                last_pt.x as f64 * inv_scale,
-                last_pt.y as f64 * inv_scale,
-            ));
+            path.push(PointD {
+                x: last_pt.x as f64 * inv_scale,
+                y: last_pt.y as f64 * inv_scale,
+                #[cfg(feature = "using_z")]
+                z: last_pt.z,
+            });
         }
         op2 = outpt_arena[op2].prev;
     }
