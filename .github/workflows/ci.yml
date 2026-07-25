@@ -10,21 +10,21 @@ env:
 
 jobs:
   test:
-    name: Test (${{ matrix.os }}, features: ${{ matrix.features == '' && 'default' || matrix.features }})
+    name: Test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        features: ["", "using_z"]
+        flags: ["", "--features using_z"]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Build all targets
-        run: cargo build --all-targets ${{ matrix.features != '' && format('--features {0}', matrix.features) || '' }}
+        run: cargo build --all-targets ${{ matrix.flags }}
       - name: Run tests
-        run: cargo test ${{ matrix.features != '' && format('--features {0}', matrix.features) || '' }}
+        run: cargo test ${{ matrix.flags }}
 
   lint:
     name: Lint
