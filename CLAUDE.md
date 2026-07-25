@@ -8,6 +8,10 @@
 
 **No stubs, no shortcuts** - Every function must be complete and production-ready. No `todo!()`, no `unimplemented!()`, no `panic!("not implemented")`, no partial implementations. If dependencies aren't ready, stop and implement them first.
 
+## External Contributions
+
+**Accept, then normalize.** Contributors can and should influence the library, and we work with them warmly — but the maintainers take complete responsibility for everything that lands. When a PR's substance is right, merge it (crediting the contributor), then immediately rework it on main to match this library's naming, comments, testing, and C++ fidelity standards. Never preserve deviating code out of deference to the contributor; protecting the library always outranks preserving a contribution's exact form. Don't hold PRs open for small must-fixes we can make ourselves in follow-up commits.
+
 ## Test-First Bug Fixing (Critical Practice)
 
 **This is the single most important practice for agent performance and reliability.**
