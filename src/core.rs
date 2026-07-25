@@ -555,6 +555,20 @@ impl From<&Point64> for PointD {
     }
 }
 
+/// Rounding PointD -> Point64 conversion (z preserved under `using_z`)
+/// Direct port from clipper.core.h Point conversion constructor, whose
+/// Init() rounds float sources when the target type is integral
+impl From<&PointD> for Point64 {
+    fn from(value: &PointD) -> Self {
+        Self {
+            x: value.x.round() as i64,
+            y: value.y.round() as i64,
+            #[cfg(feature = "using_z")]
+            z: value.z,
+        }
+    }
+}
+
 /// Calculate midpoint between two points
 /// Direct port from clipper.core.h line 278
 #[inline]
@@ -1139,6 +1153,12 @@ pub fn get_segment_intersect_pt_d(
     } else {
         ip.x = ln1a.x + t * dx1;
         ip.y = ln1a.y + t * dy1;
+        // C++ zeroes z only for computed (interpolated) intersections; the
+        // endpoint-copy branches above keep the endpoint's z
+        #[cfg(feature = "using_z")]
+        {
+            ip.z = 0;
+        }
     }
     true
 }

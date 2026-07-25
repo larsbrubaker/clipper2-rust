@@ -244,3 +244,153 @@ fn test_clipper_d_callback_sees_descaled_coordinates() {
     assert_eq!(solution.len(), 1);
     assert_eq!(solution[0].iter().filter(|pt| pt.z == 1).count(), 5);
 }
+
+// ----------------------------------------------------------------------------
+// ClipperOffset z preservation (clipper.offset.cpp USINGZ sites)
+// ----------------------------------------------------------------------------
+
+use crate::clipper::inflate_paths_64;
+use crate::offset::{ClipperOffset, EndType, JoinType};
+
+/// Square with the same z on every vertex.
+fn square_z(z: i64) -> Paths64 {
+    vec![make_path_z(&[0, 0, z, 100, 0, z, 100, 100, z, 0, 100, z])]
+}
+
+fn assert_all_z(solution: &Paths64, expected: i64) {
+    assert!(!solution.is_empty());
+    for path in solution {
+        for pt in path {
+            assert_eq!(
+                pt.z, expected,
+                "offset point {},{} lost its z (got {})",
+                pt.x, pt.y, pt.z
+            );
+        }
+    }
+}
+
+#[test]
+fn test_offset_single_point_round_preserves_z() {
+    // C++ DoGroupOffset copies pt.z onto every vertex of the built circle
+    let mut co = ClipperOffset::new_default();
+    co.add_path(
+        &make_path_z(&[10, 10, 9]),
+        JoinType::Round,
+        EndType::Polygon,
+    );
+    let mut solution = Paths64::new();
+    co.execute(5.0, &mut solution);
+    assert_all_z(&solution, 9);
+}
+
+#[test]
+fn test_offset_single_point_square_preserves_z() {
+    // C++ DoGroupOffset copies pt.z onto every vertex of the built square
+    let mut co = ClipperOffset::new_default();
+    co.add_path(
+        &make_path_z(&[10, 10, 9]),
+        JoinType::Miter,
+        EndType::Polygon,
+    );
+    let mut solution = Paths64::new();
+    co.execute(5.0, &mut solution);
+    assert_all_z(&solution, 9);
+}
+
+#[test]
+fn test_inflate_polygon_round_preserves_z() {
+    // GetPerpendic and both DoRound emit sites carry the source vertex z
+    let solution = inflate_paths_64(
+        &square_z(5),
+        10.0,
+        JoinType::Round,
+        EndType::Polygon,
+        2.0,
+        0.0,
+    );
+    assert_all_z(&solution, 5);
+}
+
+#[test]
+fn test_inflate_polygon_miter_preserves_z() {
+    // DoMiter carries path[j].z into the miter point
+    let solution = inflate_paths_64(
+        &square_z(7),
+        10.0,
+        JoinType::Miter,
+        EndType::Polygon,
+        2.0,
+        0.0,
+    );
+    assert_all_z(&solution, 7);
+}
+
+#[test]
+fn test_inflate_polygon_bevel_preserves_z() {
+    // DoBevel carries path[j].z into both bevel points
+    let solution = inflate_paths_64(
+        &square_z(7),
+        10.0,
+        JoinType::Bevel,
+        EndType::Polygon,
+        2.0,
+        0.0,
+    );
+    assert_all_z(&solution, 7);
+}
+
+#[test]
+fn test_inflate_open_path_round_preserves_z() {
+    // Open-path caps are emitted via GetPerpendic/DoRound, which carry z
+    let subject = vec![make_path_z(&[0, 0, 4, 100, 0, 4])];
+    let solution = inflate_paths_64(&subject, 10.0, JoinType::Round, EndType::Round, 2.0, 0.0);
+    assert_all_z(&solution, 4);
+}
+
+#[test]
+fn test_offset_union_inherits_z_at_crossings() {
+    // Two squares that overlap once inflated: the finishing union creates
+    // intersection points, and ClipperOffset::ZCB inherits z when the edges
+    // on both sides agree (bot1.z == bot2.z), with no user callback needed.
+    // The second square is offset vertically so the inflated boundaries
+    // genuinely cross mid-edge (aligned squares would merge via collinear
+    // horizontal joins, which never create intersection events).
+    let subject = vec![
+        make_path_z(&[0, 0, 3, 50, 0, 3, 50, 50, 3, 0, 50, 3]),
+        make_path_z(&[110, 40, 3, 160, 40, 3, 160, 90, 3, 110, 90, 3]),
+    ];
+    let solution = inflate_paths_64(&subject, 40.0, JoinType::Miter, EndType::Polygon, 2.0, 0.0);
+    assert_eq!(
+        solution.len(),
+        1,
+        "inflated squares must merge into one path"
+    );
+    assert_all_z(&solution, 3);
+}
+
+#[test]
+fn test_offset_user_z_callback_fires_at_crossings() {
+    // With z-less input the ZCB inheritance finds nothing (all z are 0), so
+    // it forwards to the user callback, exactly like C++ zCallback64_.
+    let subject = vec![
+        make_path64(&[0, 0, 50, 0, 50, 50, 0, 50]),
+        make_path64(&[110, 40, 160, 40, 160, 90, 110, 90]),
+    ];
+    let mut co = ClipperOffset::new_default();
+    co.set_z_callback(|_, _, _, _, pt| pt.z = 99);
+    co.add_paths(&subject, JoinType::Miter, EndType::Polygon);
+    let mut solution = Paths64::new();
+    co.execute(40.0, &mut solution);
+
+    assert_eq!(
+        solution.len(),
+        1,
+        "inflated squares must merge into one path"
+    );
+    let flagged = solution.iter().flatten().filter(|pt| pt.z == 99).count();
+    assert!(
+        flagged > 0,
+        "union crossings must invoke the user z callback"
+    );
+}

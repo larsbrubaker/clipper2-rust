@@ -18,8 +18,12 @@ use crate::core::{
     PathD, Paths64, Point64, PointD, Rect64,
 };
 use crate::engine::ClipType;
+#[cfg(feature = "using_z")]
+use crate::engine::ZCallback64;
 use crate::engine_public::{Clipper64, PolyTree64};
 use crate::FillRule;
+#[cfg(feature = "using_z")]
+use std::{cell::RefCell, rc::Rc};
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -164,17 +168,24 @@ fn is_closed_path(et: EndType) -> bool {
 /// Direct port from clipper.offset.cpp GetPerpendic.
 #[inline]
 fn get_perpendic(pt: &Point64, norm: &PointD, delta: f64) -> Point64 {
-    Point64::new(
-        (pt.x as f64 + norm.x * delta).round() as i64,
-        (pt.y as f64 + norm.y * delta).round() as i64,
-    )
+    Point64 {
+        x: (pt.x as f64 + norm.x * delta).round() as i64,
+        y: (pt.y as f64 + norm.y * delta).round() as i64,
+        #[cfg(feature = "using_z")]
+        z: pt.z,
+    }
 }
 
 /// Get perpendicular offset point (returns PointD, no rounding).
 /// Direct port from clipper.offset.cpp GetPerpendicD.
 #[inline]
 fn get_perpendic_d(pt: &Point64, norm: &PointD, delta: f64) -> PointD {
-    PointD::new(pt.x as f64 + norm.x * delta, pt.y as f64 + norm.y * delta)
+    PointD {
+        x: pt.x as f64 + norm.x * delta,
+        y: pt.y as f64 + norm.y * delta,
+        #[cfg(feature = "using_z")]
+        z: pt.z,
+    }
 }
 
 /// Negate all coordinates in a PathD.
@@ -185,13 +196,6 @@ fn negate_path(path: &mut PathD) {
         pt.x = -pt.x;
         pt.y = -pt.y;
     }
-}
-
-/// Convert PointD to Point64 by rounding.
-/// Helper for C++ implicit conversions where path_out.emplace_back(PointD) rounds.
-#[inline]
-fn point64_from_f(x: f64, y: f64) -> Point64 {
-    Point64::new(x.round() as i64, y.round() as i64)
 }
 
 // ---------------------------------------------------------------------------
@@ -274,6 +278,12 @@ pub struct ClipperOffset {
 
     // Callbacks
     delta_callback: Option<DeltaCallback64>,
+
+    // Rc<RefCell<..>> replaces C++'s std::bind(this): the ZCB proxy closure
+    // installed on the finishing union must be 'static, so it can't borrow
+    // self and instead shares ownership of the user callback.
+    #[cfg(feature = "using_z")]
+    z_callback: Option<Rc<RefCell<Box<dyn ZCallback64 + 'static>>>>,
 }
 
 impl ClipperOffset {
@@ -308,6 +318,8 @@ impl ClipperOffset {
             preserve_collinear,
             reverse_solution,
             delta_callback: None,
+            #[cfg(feature = "using_z")]
+            z_callback: None,
         }
     }
 
@@ -368,6 +380,14 @@ impl ClipperOffset {
     /// Direct port from ClipperOffset::SetDeltaCallback.
     pub fn set_delta_callback(&mut self, cb: Option<DeltaCallback64>) {
         self.delta_callback = cb;
+    }
+
+    /// Set the fallback callback used to assign z at intersections created
+    /// by the finishing union when z inheritance finds no agreeing vertex
+    /// Direct port from clipper.offset.h line 118 (ClipperOffset::SetZCallback)
+    #[cfg(feature = "using_z")]
+    pub fn set_z_callback(&mut self, cb: impl ZCallback64 + 'static) {
+        self.z_callback = Some(Rc::new(RefCell::new(Box::new(cb))));
     }
 
     // ------------------------------------------------------------------
@@ -505,6 +525,24 @@ impl ClipperOffset {
         c.set_preserve_collinear(self.preserve_collinear);
         // The solution should retain the orientation of the input
         c.set_reverse_solution(self.reverse_solution != paths_reversed);
+        // C++ always installs the ZCB proxy under USINGZ (even with no user
+        // callback) so offset z values survive the finishing union
+        // Direct port from clipper.offset.cpp line 543 (ClipperOffset::ZCB)
+        #[cfg(feature = "using_z")]
+        {
+            let user_cb = self.z_callback.clone();
+            c.set_z_callback(move |bot1, top1, bot2, top2, ip| {
+                if bot1.z != 0 && (bot1.z == bot2.z || bot1.z == top2.z) {
+                    ip.z = bot1.z;
+                } else if bot2.z != 0 && bot2.z == top1.z {
+                    ip.z = bot2.z;
+                } else if top1.z != 0 && top1.z == top2.z {
+                    ip.z = top1.z;
+                } else if let Some(ref cb) = user_cb {
+                    (*cb.borrow_mut())(bot1, top1, bot2, top2, ip);
+                }
+            });
+        }
         c.add_subject(&self.solution);
 
         let fill_rule = if paths_reversed {
@@ -551,26 +589,34 @@ impl ClipperOffset {
         let pt2: PointD;
         if j == k {
             let abs_delta = self.group_delta.abs();
-            pt1 = PointD::new(
-                path[j].x as f64 - abs_delta * self.norms[j].x,
-                path[j].y as f64 - abs_delta * self.norms[j].y,
-            );
-            pt2 = PointD::new(
-                path[j].x as f64 + abs_delta * self.norms[j].x,
-                path[j].y as f64 + abs_delta * self.norms[j].y,
-            );
+            pt1 = PointD {
+                x: path[j].x as f64 - abs_delta * self.norms[j].x,
+                y: path[j].y as f64 - abs_delta * self.norms[j].y,
+                #[cfg(feature = "using_z")]
+                z: path[j].z,
+            };
+            pt2 = PointD {
+                x: path[j].x as f64 + abs_delta * self.norms[j].x,
+                y: path[j].y as f64 + abs_delta * self.norms[j].y,
+                #[cfg(feature = "using_z")]
+                z: path[j].z,
+            };
         } else {
-            pt1 = PointD::new(
-                path[j].x as f64 + self.group_delta * self.norms[k].x,
-                path[j].y as f64 + self.group_delta * self.norms[k].y,
-            );
-            pt2 = PointD::new(
-                path[j].x as f64 + self.group_delta * self.norms[j].x,
-                path[j].y as f64 + self.group_delta * self.norms[j].y,
-            );
+            pt1 = PointD {
+                x: path[j].x as f64 + self.group_delta * self.norms[k].x,
+                y: path[j].y as f64 + self.group_delta * self.norms[k].y,
+                #[cfg(feature = "using_z")]
+                z: path[j].z,
+            };
+            pt2 = PointD {
+                x: path[j].x as f64 + self.group_delta * self.norms[j].x,
+                y: path[j].y as f64 + self.group_delta * self.norms[j].y,
+                #[cfg(feature = "using_z")]
+                z: path[j].z,
+            };
         }
-        self.path_out.push(point64_from_f(pt1.x, pt1.y));
-        self.path_out.push(point64_from_f(pt2.x, pt2.y));
+        self.path_out.push(Point64::from(&pt1));
+        self.path_out.push(Point64::from(&pt2));
     }
 
     /// Square join implementation.
@@ -587,8 +633,15 @@ impl ClipperOffset {
 
         let abs_delta = self.group_delta.abs();
 
-        // Now offset the original vertex delta units along unit vector
-        let pt_q = PointD::new(path[j].x as f64, path[j].y as f64);
+        // Now offset the original vertex delta units along unit vector.
+        // pt_q carries path[j].z like C++'s PointD(path[j]) conversion; the
+        // z survives translation but is zeroed by a computed intersection.
+        let pt_q = PointD {
+            x: path[j].x as f64,
+            y: path[j].y as f64,
+            #[cfg(feature = "using_z")]
+            z: path[j].z,
+        };
         let pt_q = translate_point(&pt_q, abs_delta * vec.x, abs_delta * vec.y);
         // Get perpendicular vertices
         let pt1 = translate_point(&pt_q, self.group_delta * vec.y, self.group_delta * -vec.x);
@@ -605,16 +658,16 @@ impl ClipperOffset {
             get_segment_intersect_pt_d(pt1, pt2, pt3, pt4, &mut pt);
             // Get the second intersect point through reflection
             let reflected = reflect_point(&pt, &pt_q);
-            self.path_out.push(point64_from_f(reflected.x, reflected.y));
-            self.path_out.push(point64_from_f(pt.x, pt.y));
+            self.path_out.push(Point64::from(&reflected));
+            self.path_out.push(Point64::from(&pt));
         } else {
             let pt4 = get_perpendic_d(&path[j], &self.norms[k], self.group_delta);
             let mut pt = pt_q;
             get_segment_intersect_pt_d(pt1, pt2, pt3, pt4, &mut pt);
-            self.path_out.push(point64_from_f(pt.x, pt.y));
+            self.path_out.push(Point64::from(&pt));
             // Get the second intersect point through reflection
             let reflected = reflect_point(&pt, &pt_q);
-            self.path_out.push(point64_from_f(reflected.x, reflected.y));
+            self.path_out.push(Point64::from(&reflected));
         }
     }
 
@@ -622,10 +675,12 @@ impl ClipperOffset {
     /// Direct port from ClipperOffset::DoMiter (clipper.offset.cpp line 258-271).
     fn do_miter(&mut self, path: &Path64, j: usize, k: usize, cos_a: f64) {
         let q = self.group_delta / (cos_a + 1.0);
-        self.path_out.push(point64_from_f(
-            path[j].x as f64 + (self.norms[k].x + self.norms[j].x) * q,
-            path[j].y as f64 + (self.norms[k].y + self.norms[j].y) * q,
-        ));
+        self.path_out.push(Point64 {
+            x: (path[j].x as f64 + (self.norms[k].x + self.norms[j].x) * q).round() as i64,
+            y: (path[j].y as f64 + (self.norms[k].y + self.norms[j].y) * q).round() as i64,
+            #[cfg(feature = "using_z")]
+            z: path[j].z,
+        });
     }
 
     /// Round join implementation.
@@ -659,10 +714,12 @@ impl ClipperOffset {
         if j == k {
             offset_vec = offset_vec.negate();
         }
-        self.path_out.push(point64_from_f(
-            pt.x as f64 + offset_vec.x,
-            pt.y as f64 + offset_vec.y,
-        ));
+        self.path_out.push(Point64 {
+            x: (pt.x as f64 + offset_vec.x).round() as i64,
+            y: (pt.y as f64 + offset_vec.y).round() as i64,
+            #[cfg(feature = "using_z")]
+            z: pt.z,
+        });
 
         let steps = (self.steps_per_rad * angle.abs()).ceil() as i32; // #448, #456
         for _ in 1..steps {
@@ -671,10 +728,12 @@ impl ClipperOffset {
                 offset_vec.x * self.step_cos - self.step_sin * offset_vec.y,
                 offset_vec.x * self.step_sin + offset_vec.y * self.step_cos,
             );
-            self.path_out.push(point64_from_f(
-                pt.x as f64 + offset_vec.x,
-                pt.y as f64 + offset_vec.y,
-            ));
+            self.path_out.push(Point64 {
+                x: (pt.x as f64 + offset_vec.x).round() as i64,
+                y: (pt.y as f64 + offset_vec.y).round() as i64,
+                #[cfg(feature = "using_z")]
+                z: pt.z,
+            });
         }
         self.path_out
             .push(get_perpendic(&path[j], &self.norms[j], self.group_delta));
@@ -921,10 +980,18 @@ impl ClipperOffset {
                         0
                     };
                     self.path_out = ellipse_point64(pt, radius, radius, steps);
+                    #[cfg(feature = "using_z")]
+                    for p in self.path_out.iter_mut() {
+                        p.z = pt.z;
+                    }
                 } else {
                     let d = abs_delta_local.ceil() as i64;
                     let r = Rect64::new(pt.x - d, pt.y - d, pt.x + d, pt.y + d);
                     self.path_out = r.as_path();
+                    #[cfg(feature = "using_z")]
+                    for p in self.path_out.iter_mut() {
+                        p.z = pt.z;
+                    }
                 }
 
                 let path_out = std::mem::take(&mut self.path_out);
