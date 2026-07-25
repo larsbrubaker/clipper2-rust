@@ -124,13 +124,27 @@ pub mod errors {
     pub const RANGE_ERROR_I: i32 = 64;
 }
 
+#[cfg(feature = "using_z")]
+type ZType = i64;
+
 /// 2D point with generic numeric type
 /// Direct port from clipper.core.h line 117
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(C)]
 pub struct Point<T> {
     pub x: T,
     pub y: T,
+    #[cfg(feature = "using_z")]
+    pub z: ZType,
+}
+
+impl<T> PartialEq for Point<T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
 }
 
 impl<T> Point<T>
@@ -139,7 +153,21 @@ where
 {
     /// Create a new point
     pub fn new(x: T, y: T) -> Self {
-        Self { x, y }
+        Self {
+            x,
+            y,
+            #[cfg(feature = "using_z")]
+            z: 0,
+        }
+    }
+    #[cfg(feature = "using_z")]
+    pub fn new_z(x: T, y: T, z: ZType) -> Self {
+        Self {
+            x,
+            y,
+            #[cfg(feature = "using_z")]
+            z,
+        }
     }
 
     /// Create a zero point
@@ -150,6 +178,8 @@ where
         Self {
             x: T::zero(),
             y: T::zero(),
+            #[cfg(feature = "using_z")]
+            z: ZType::zero(),
         }
     }
 }
@@ -163,6 +193,8 @@ where
         Self {
             x: self.x + other.x,
             y: self.y + other.y,
+            #[cfg(feature = "using_z")]
+            z: 0,
         }
     }
 
@@ -171,6 +203,8 @@ where
         Self {
             x: self.x - other.x,
             y: self.y - other.y,
+            #[cfg(feature = "using_z")]
+            z: 0,
         }
     }
 
@@ -179,6 +213,8 @@ where
         Self {
             x: T::zero() - self.x,
             y: T::zero() - self.y,
+            #[cfg(feature = "using_z")]
+            z: 0,
         }
     }
 }
@@ -196,6 +232,8 @@ where
         Point {
             x: self.x.into() * scale,
             y: self.y.into() * scale,
+            #[cfg(feature = "using_z")]
+            z: self.z,
         }
     }
 }
@@ -302,6 +340,8 @@ where
         Point {
             x: (self.left + self.right) / (T::one() + T::one()),
             y: (self.top + self.bottom) / (T::one() + T::one()),
+            #[cfg(feature = "using_z")]
+            z: 0,
         }
     }
 
@@ -485,12 +525,33 @@ pub type PathsD = Paths<f64>;
 pub const INVALID_POINT64: Point64 = Point64 {
     x: i64::MAX,
     y: i64::MAX,
+    #[cfg(feature = "using_z")]
+    z: i64::MAX,
 };
 
 pub const INVALID_POINTD: PointD = PointD {
     x: f64::MAX,
     y: f64::MAX,
+    #[cfg(feature = "using_z")]
+    z: i64::MAX,
 };
+
+impl From<&mut Point64> for PointD {
+    fn from(value: &mut Point64) -> Self {
+        Self::from(value as &Point64)
+    }
+}
+
+impl From<&Point64> for PointD {
+    fn from(value: &Point64) -> Self {
+        Self {
+            x: value.x as f64,
+            y: value.y as f64,
+            #[cfg(feature = "using_z")]
+            z: value.z,
+        }
+    }
+}
 
 /// Calculate midpoint between two points
 /// Direct port from clipper.core.h line 278
@@ -502,6 +563,8 @@ where
     Point {
         x: (p1.x + p2.x) / (T::one() + T::one()),
         y: (p1.y + p2.y) / (T::one() + T::one()),
+        #[cfg(feature = "using_z")]
+        z: 0,
     }
 }
 
@@ -1037,6 +1100,10 @@ pub fn get_segment_intersect_pt(
         // C++ uses static_cast<T> which truncates toward zero, not rounds
         ip.x = (ln1a.x as f64 + t * dx1) as i64;
         ip.y = (ln1a.y as f64 + t * dy1) as i64;
+        #[cfg(feature = "using_z")]
+        {
+            ip.z = 0;
+        }
     }
 
     true
@@ -1296,6 +1363,8 @@ where
         result.push(Point {
             x: T1::from_f64(pt.x.to_f64() * sx),
             y: T1::from_f64(pt.y.to_f64() * sy),
+            #[cfg(feature = "using_z")]
+            z: pt.z,
         });
     }
     result
@@ -1392,6 +1461,8 @@ where
         result.push(Point {
             x: T1::from_f64(pt.x.to_f64()),
             y: T1::from_f64(pt.y.to_f64()),
+            #[cfg(feature = "using_z")]
+            z: pt.z,
         });
     }
     result
@@ -1484,6 +1555,8 @@ where
     Point {
         x: T::from_f64(pt.x.to_f64() + dx),
         y: T::from_f64(pt.y.to_f64() + dy),
+        #[cfg(feature = "using_z")]
+        z: pt.z,
     }
 }
 
@@ -1497,6 +1570,8 @@ where
     Point {
         x: pivot.x + (pivot.x - pt.x),
         y: pivot.y + (pivot.y - pt.y),
+        #[cfg(feature = "using_z")]
+        z: pt.z,
     }
 }
 
@@ -1644,11 +1719,15 @@ where
         Point {
             x: T::from_f64(seg1.x.to_f64() + nearbyint_f64(q * dx)),
             y: T::from_f64(seg1.y.to_f64() + nearbyint_f64(q * dy)),
+            #[cfg(feature = "using_z")]
+            z: 0,
         }
     } else {
         Point {
             x: T::from_f64(seg1.x.to_f64() + q * dx),
             y: T::from_f64(seg1.y.to_f64() + q * dy),
+            #[cfg(feature = "using_z")]
+            z: 0,
         }
     }
 }
@@ -1670,6 +1749,24 @@ where
         return 0.0;
     }
     sqr(a * d - c * b) / (c * c + d * d)
+}
+
+pub fn ellipse_rect64(rect: &Rect64, steps: usize) -> Path64 {
+    return ellipse_point64(
+        rect.mid_point(),
+        rect.width() as f64 * 0.5,
+        rect.height() as f64 * 0.5,
+        steps,
+    );
+}
+
+pub fn ellipse_rect_d(rect: &RectD, steps: usize) -> PathD {
+    return ellipse_point_d(
+        rect.mid_point(),
+        rect.width() as f64 * 0.5,
+        rect.height() as f64 * 0.5,
+        steps,
+    );
 }
 
 /// Generate an elliptical path around a center point

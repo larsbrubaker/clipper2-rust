@@ -287,6 +287,11 @@ impl Clipper64 {
         }
     }
 
+    #[cfg(feature = "using_z")]
+    pub fn set_z_callback(&mut self, cb: impl ZCallback64Trait + 'static) {
+        self.base.z_callback = Some(Box::new(cb));
+    }
+
     /// Add subject paths
     pub fn add_subject(&mut self, subjects: &Paths64) {
         self.base.add_paths(subjects, PathType::Subject, false);
@@ -499,6 +504,24 @@ impl ClipperD {
 
     pub fn inv_scale(&self) -> f64 {
         self.inv_scale
+    }
+
+    #[cfg(feature = "using_z")]
+    pub fn set_z_callback(&mut self, mut cb: impl ZCallbackDTrait + 'static) {
+        let inv_scale = self.inv_scale;
+        self.base.z_callback = Some(Box::new(move |e1bot, e1top, e2bot, e2top, pt| {
+            // de-scale (x & y)
+            // temporarily convert integers to their initial float values
+            // this will slow clipping marginally but will make it much easier
+            // to understand the coordinates passed to the callback function
+            let mut tmp = PointD::from(pt as &Point64).scale(inv_scale);
+            let e1b = PointD::from(e1bot).scale(inv_scale);
+            let e1t = PointD::from(e1top).scale(inv_scale);
+            let e2b = PointD::from(e2bot).scale(inv_scale);
+            let e2t = PointD::from(e2top).scale(inv_scale);
+            cb(&e1b, &e1t, &e2b, &e2t, &mut tmp);
+            pt.z = tmp.z; // only update 'z'
+        }));
     }
 
     /// Add subject paths (double precision)

@@ -339,6 +339,16 @@ impl Default for HorzJoin {
     }
 }
 
+#[cfg(feature = "using_z")]
+pub trait ZCallback64Trait: FnMut(&Point64, &Point64, &Point64, &Point64, &mut Point64) {}
+#[cfg(feature = "using_z")]
+impl<T: FnMut(&Point64, &Point64, &Point64, &Point64, &mut Point64)> ZCallback64Trait for T {}
+
+#[cfg(feature = "using_z")]
+pub trait ZCallbackDTrait: FnMut(&PointD, &PointD, &PointD, &PointD, &mut PointD) {}
+#[cfg(feature = "using_z")]
+impl<T: FnMut(&PointD, &PointD, &PointD, &PointD, &mut PointD)> ZCallbackDTrait for T {}
+
 // ============================================================================
 // ClipperBase - Main clipping engine struct
 // Direct port from clipper.engine.h line 192
@@ -383,6 +393,12 @@ pub struct ClipperBase {
     pub intersect_nodes: Vec<IntersectNode>,
     pub horz_seg_list: Vec<HorzSegment>,
     pub horz_join_list: Vec<HorzJoin>,
+
+    #[cfg(feature = "using_z")]
+    pub(crate) z_callback: Option<Box<dyn ZCallback64Trait + 'static>>,
+
+    #[cfg(feature = "using_z")]
+    pub default_z: i64,
 }
 
 impl ClipperBase {
@@ -411,6 +427,11 @@ impl ClipperBase {
             intersect_nodes: Vec::new(),
             horz_seg_list: Vec::new(),
             horz_join_list: Vec::new(),
+
+            #[cfg(feature = "using_z")]
+            z_callback: None,
+            #[cfg(feature = "using_z")]
+            default_z: 0,
         }
     }
 
@@ -1034,6 +1055,46 @@ impl ClipperBase {
         self.actives = None;
         self.sel = None;
         self.succeeded = true;
+    }
+
+    #[cfg(feature = "using_z")]
+    pub fn set_z(&mut self, e1_idx: usize, e2_idx: usize, ip_idx: usize) {
+        if self.z_callback.is_none() {
+            return;
+        };
+        let e1 = &self.active_arena[e1_idx];
+        let e2 = &self.active_arena[e2_idx];
+        // prioritize subject over clip vertices by passing
+        // subject vertices before clip vertices in the callback
+        if self.get_poly_type_idx(e1_idx) == PathType::Subject {
+            let ip = &mut self.outpt_arena[ip_idx].pt;
+            if *ip == e1.bot {
+                ip.z = e1.bot.z;
+            } else if *ip == e1.top {
+                ip.z = e1.top.z;
+            } else if *ip == e2.bot {
+                ip.z = e2.bot.z;
+            } else if *ip == e2.top {
+                ip.z = e2.top.z;
+            } else {
+                ip.z = self.default_z;
+            }
+            self.z_callback.as_mut().unwrap()(&e1.bot, &e1.top, &e2.bot, &e2.top, ip);
+        } else {
+            let ip = &mut self.outpt_arena[ip_idx].pt;
+            if *ip == e2.bot {
+                ip.z = e2.bot.z;
+            } else if *ip == e2.top {
+                ip.z = e2.top.z;
+            } else if *ip == e1.bot {
+                ip.z = e1.bot.z;
+            } else if *ip == e1.top {
+                ip.z = e1.top.z;
+            } else {
+                ip.z = self.default_z;
+            }
+            self.z_callback.as_mut().unwrap()(&e2.bot, &e2.top, &e1.bot, &e1.top, ip);
+        }
     }
 
     /// Clean up after execution
@@ -1877,9 +1938,11 @@ impl ClipperBase {
                 }
             }
 
+            let _result_op: usize;
+
             // toggle contribution
             if is_hot_edge(&self.active_arena[edge_o]) {
-                self.add_out_pt(edge_o, pt);
+                _result_op = self.add_out_pt(edge_o, pt);
                 if self.is_front(edge_o) {
                     let or = self.active_arena[edge_o].outrec.unwrap();
                     self.outrec_list[or].front_edge = None;
@@ -1911,9 +1974,13 @@ impl ClipperBase {
                         return;
                     }
                 }
-                self.start_open_path(edge_o, pt);
+                _result_op = self.start_open_path(edge_o, pt);
             } else {
-                self.start_open_path(edge_o, pt);
+                _result_op = self.start_open_path(edge_o, pt);
+            }
+            #[cfg(feature = "using_z")]
+            if self.z_callback.is_some() {
+                self.set_z(edge_o, edge_c, _result_op);
             }
             return;
         }
@@ -1988,27 +2055,64 @@ impl ClipperBase {
         }
 
         // NOW PROCESS THE INTERSECTION
+        let mut _result_op: Option<usize>;
         if is_hot_edge(&self.active_arena[e1_idx]) && is_hot_edge(&self.active_arena[e2_idx]) {
             if (old_e1_windcnt != 0 && old_e1_windcnt != 1)
                 || (old_e2_windcnt != 0 && old_e2_windcnt != 1)
                 || (!self.is_same_poly_type_idx(e1_idx, e2_idx) && self.cliptype != ClipType::Xor)
             {
-                self.add_local_max_poly(e1_idx, e2_idx, pt);
+                _result_op = self.add_local_max_poly(e1_idx, e2_idx, pt);
+                #[cfg(feature = "using_z")]
+                if self.z_callback.is_some() {
+                    if let Some(res_op) = _result_op {
+                        self.set_z(e1_idx, e2_idx, res_op);
+                    }
+                }
             } else if self.is_front(e1_idx)
                 || self.active_arena[e1_idx].outrec == self.active_arena[e2_idx].outrec
             {
-                self.add_local_max_poly(e1_idx, e2_idx, pt);
-                self.add_local_min_poly(e1_idx, e2_idx, pt, false);
+                _result_op = self.add_local_max_poly(e1_idx, e2_idx, pt);
+                let _op2 = self.add_local_min_poly(e1_idx, e2_idx, pt, false);
+                #[cfg(feature = "using_z")]
+                {
+                    if self.z_callback.is_some() {
+                        if let Some(res_op) = _result_op {
+                            self.set_z(e1_idx, e2_idx, res_op);
+                        }
+                    }
+                    if self.z_callback.is_some() {
+                        self.set_z(e1_idx, e2_idx, _op2);
+                    }
+                }
             } else {
-                self.add_out_pt(e1_idx, pt);
-                self.add_out_pt(e2_idx, pt);
+                _result_op = Some(self.add_out_pt(e1_idx, pt));
+                let _op2 = self.add_out_pt(e2_idx, pt);
+                #[cfg(feature = "using_z")]
+                {
+                    if self.z_callback.is_some() {
+                        self.set_z(e1_idx, e2_idx, _result_op.unwrap());
+                        self.set_z(e1_idx, e2_idx, _op2);
+                    }
+                }
                 self.swap_outrecs(e1_idx, e2_idx);
             }
         } else if is_hot_edge(&self.active_arena[e1_idx]) {
-            self.add_out_pt(e1_idx, pt);
+            _result_op = Some(self.add_out_pt(e1_idx, pt));
+            #[cfg(feature = "using_z")]
+            {
+                if self.z_callback.is_some() {
+                    self.set_z(e1_idx, e2_idx, _result_op.unwrap());
+                }
+            }
             self.swap_outrecs(e1_idx, e2_idx);
         } else if is_hot_edge(&self.active_arena[e2_idx]) {
-            self.add_out_pt(e2_idx, pt);
+            _result_op = Some(self.add_out_pt(e2_idx, pt));
+            #[cfg(feature = "using_z")]
+            {
+                if self.z_callback.is_some() {
+                    self.set_z(e1_idx, e2_idx, _result_op.unwrap());
+                }
+            }
             self.swap_outrecs(e1_idx, e2_idx);
         } else {
             // neither edge is hot
@@ -2031,12 +2135,22 @@ impl ClipperBase {
             }
 
             if !self.is_same_poly_type_idx(e1_idx, e2_idx) {
-                self.add_local_min_poly(e1_idx, e2_idx, pt, false);
+                _result_op = Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
+                #[cfg(feature = "using_z")]
+                {
+                    if self.z_callback.is_some() {
+                        self.set_z(e1_idx, e2_idx, _result_op.unwrap());
+                    }
+                }
             } else if old_e1_windcnt == 1 && old_e2_windcnt == 1 {
+                #[cfg(feature = "using_z")]
+                {
+                    _result_op = None;
+                }
                 match self.cliptype {
                     ClipType::Union => {
                         if e1wc2 <= 0 && e2wc2 <= 0 {
-                            self.add_local_min_poly(e1_idx, e2_idx, pt, false);
+                            _result_op = Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
                         }
                     }
                     ClipType::Difference => {
@@ -2047,7 +2161,7 @@ impl ClipperBase {
                                 && e1wc2 <= 0
                                 && e2wc2 <= 0)
                         {
-                            self.add_local_min_poly(e1_idx, e2_idx, pt, false);
+                            _result_op = Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
                         }
                     }
                     ClipType::Xor => {
@@ -2056,8 +2170,14 @@ impl ClipperBase {
                     _ => {
                         // Intersection
                         if e1wc2 > 0 && e2wc2 > 0 {
-                            self.add_local_min_poly(e1_idx, e2_idx, pt, false);
+                            _result_op = Some(self.add_local_min_poly(e1_idx, e2_idx, pt, false));
                         }
+                    }
+                }
+                #[cfg(feature = "using_z")]
+                if let Some(result_op) = _result_op {
+                    if self.z_callback.is_some() {
+                        self.set_z(e1_idx, e2_idx, result_op);
                     }
                 }
             }
@@ -2233,7 +2353,15 @@ impl ClipperBase {
 
         if is_hot_edge(&self.active_arena[horz_idx]) {
             let curr_x = self.active_arena[horz_idx].curr_x;
-            let op = self.add_out_pt(horz_idx, Point64::new(curr_x, y));
+            let op = self.add_out_pt(
+                horz_idx,
+                Point64 {
+                    x: curr_x,
+                    y,
+                    #[cfg(feature = "using_z")]
+                    z: self.active_arena[horz_idx].bot.z,
+                },
+            );
             let or = self.outpt_arena[op].outrec;
             if !self.outrec_list[or].is_open {
                 self.add_trial_horz_join(op);
@@ -3100,6 +3228,18 @@ impl ClipperBase {
             self.outpt_arena[next_next_op].pt,
             &mut ip,
         );
+
+        #[cfg(feature = "using_z")]
+        if let Some(z_cb) = &mut self.z_callback {
+            let oa = &self.outpt_arena;
+            z_cb(
+                &oa[prev_op].pt,
+                &oa[split_op].pt,
+                &oa[oa[split_op].next].pt,
+                &oa[next_next_op].pt,
+                &mut ip,
+            );
+        }
 
         let area1 = area_outpt(self.outrec_list[outrec_idx].pts.unwrap(), &self.outpt_arena);
         let abs_area1 = area1.abs();

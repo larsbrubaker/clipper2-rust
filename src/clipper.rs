@@ -16,8 +16,8 @@
 use crate::core::{
     check_precision_range, constants, cross_product_three_points, distance_sqr, is_collinear,
     perpendic_dist_from_line_sqrd, point_in_polygon, scale_path, scale_paths, scale_rect, sqr,
-    FromF64, Path, Path64, PathD, Paths, Paths64, PathsD, Point, Point64, PointInPolygonResult,
-    Rect64, RectD, ToF64,
+    FromF64, Path, Path64, PathD, Paths, Paths64, PathsD, Point, Point64, PointD,
+    PointInPolygonResult, Rect64, RectD, ToF64,
 };
 use crate::engine::ClipType;
 use crate::engine_public::{Clipper64, ClipperD, PolyTree64, PolyTreeD};
@@ -286,6 +286,8 @@ where
         result.push(Point {
             x: pt.x + dx,
             y: pt.y + dy,
+            #[cfg(feature = "using_z")]
+            z: 0,
         });
     }
     result
@@ -583,10 +585,38 @@ pub fn make_path_d(coords: &[f64]) -> PathD {
     let mut result = PathD::with_capacity(size / 2);
     let mut i = 0;
     while i < size {
-        result.push(Point::<f64>::new(coords[i], coords[i + 1]));
+        result.push(PointD::new(coords[i], coords[i + 1]));
         i += 2;
     }
     result
+}
+
+#[cfg(feature = "using_z")]
+pub fn make_path_z(coords: &[i64]) -> Path64 {
+    let size = coords.len() / 3;
+    let mut result = Path64::with_capacity(size);
+    for i in 0..size {
+        result.push(Point64 {
+            x: coords[i * 3],
+            y: coords[i * 3 + 1],
+            z: coords[i * 3 + 2],
+        });
+    }
+    result
+}
+
+#[cfg(feature = "using_z")]
+pub fn make_path_zd(coords: &[f64]) -> PathD {
+    let size = coords.len() / 3;
+    let mut result = PathD::with_capacity(size);
+    for i in 0..size {
+        result.push(PointD {
+            x: coords[i * 3],
+            y: coords[i * 3 + 1],
+            z: coords[i * 3 + 2] as i64,
+        });
+    }
+    return result;
 }
 
 // ============================================================================
