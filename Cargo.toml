@@ -18,8 +18,10 @@ categories = ["algorithms", "graphics", "mathematics"]
 exclude = ["demo/", "docs/", "Tests/", ".github/", ".claude/", "benches/", "scripts/", "CLAUDE.md", "nul"]
 
 [features]
-default = [ ]
+default = []
 
+# Mirrors the C++ USINGZ ifdef: adds a z field to Point<T> and z-callback
+# support on Clipper64/ClipperD.
 using_z = []
 
 [lib]
@@ -38,3 +40,8 @@ rand = "0.8"
 [[bench]]
 name = "clipper_bench"
 harness = false
+
+# The using_z example calls z-only APIs, so it must not compile in default builds.
+[[example]]
+name = "using_z"
+required-features = ["using_z"]

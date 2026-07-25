@@ -52,3 +52,8 @@ pub use minkowski::*;
 pub use offset::*;
 pub use rectclip::*;
 pub use version::*;
+
+// Include using_z feature tests from separate file
+#[cfg(all(test, feature = "using_z"))]
+#[path = "using_z_tests.rs"]
+mod using_z_tests;

@@ -287,8 +287,10 @@ impl Clipper64 {
         }
     }
 
+    /// Set the callback invoked at each intersection to assign the z value
+    /// Direct port from clipper.engine.h line 466 (Clipper64::SetZCallback)
     #[cfg(feature = "using_z")]
-    pub fn set_z_callback(&mut self, cb: impl ZCallback64Trait + 'static) {
+    pub fn set_z_callback(&mut self, cb: impl ZCallback64 + 'static) {
         self.base.z_callback = Some(Box::new(cb));
     }
 
@@ -506,8 +508,12 @@ impl ClipperD {
         self.inv_scale
     }
 
+    /// Set the callback invoked at each intersection to assign the z value.
+    /// The user callback sees de-scaled (double) coordinates; the stored proxy
+    /// closure replaces C++'s ZCB member + std::bind indirection.
+    /// Direct port from clipper.engine.h lines 540-556 (ClipperD::SetZCallback/ZCB)
     #[cfg(feature = "using_z")]
-    pub fn set_z_callback(&mut self, mut cb: impl ZCallbackDTrait + 'static) {
+    pub fn set_z_callback(&mut self, mut cb: impl ZCallbackD + 'static) {
         let inv_scale = self.inv_scale;
         self.base.z_callback = Some(Box::new(move |e1bot, e1top, e2bot, e2top, pt| {
             // de-scale (x & y)

@@ -124,8 +124,10 @@ pub mod errors {
     pub const RANGE_ERROR_I: i32 = 64;
 }
 
+/// Z coordinate type when the `using_z` feature is enabled
+/// Direct port from clipper.core.h line 111 (z_type)
 #[cfg(feature = "using_z")]
-type ZType = i64;
+pub type ZType = i64;
 
 /// 2D point with generic numeric type
 /// Direct port from clipper.core.h line 117
@@ -138,6 +140,8 @@ pub struct Point<T> {
     pub z: ZType,
 }
 
+// Manual impl because equality must ignore z: C++ operator== compares only
+// x and y even under USINGZ, and set_z's vertex-inheritance depends on that.
 impl<T> PartialEq for Point<T>
 where
     T: PartialEq,
@@ -160,14 +164,12 @@ where
             z: 0,
         }
     }
+
+    /// Create a new point with an explicit z value
+    /// Direct port from clipper.core.h Point(x, y, z) constructor
     #[cfg(feature = "using_z")]
     pub fn new_z(x: T, y: T, z: ZType) -> Self {
-        Self {
-            x,
-            y,
-            #[cfg(feature = "using_z")]
-            z,
-        }
+        Self { x, y, z }
     }
 
     /// Create a zero point
@@ -189,6 +191,8 @@ where
     T: Num + Copy,
 {
     /// Add two points
+    // z is zeroed (not propagated): C++ operator+ builds the result with
+    // Point(x, y), which default-initializes z. Only scaling preserves z.
     pub fn add_point(self, other: Self) -> Self {
         Self {
             x: self.x + other.x,
@@ -522,26 +526,24 @@ pub type Paths64 = Paths<i64>;
 pub type PathsD = Paths<f64>;
 
 /// Invalid point constants
+// z is 0, not MAX: C++ constructs these via Point(x, y), which
+// default-initializes z (and equality ignores z regardless).
 pub const INVALID_POINT64: Point64 = Point64 {
     x: i64::MAX,
     y: i64::MAX,
     #[cfg(feature = "using_z")]
-    z: i64::MAX,
+    z: 0,
 };
 
 pub const INVALID_POINTD: PointD = PointD {
     x: f64::MAX,
     y: f64::MAX,
     #[cfg(feature = "using_z")]
-    z: i64::MAX,
+    z: 0,
 };
 
-impl From<&mut Point64> for PointD {
-    fn from(value: &mut Point64) -> Self {
-        Self::from(value as &Point64)
-    }
-}
-
+/// Lossy Point64 -> PointD conversion (z preserved under `using_z`)
+/// Direct port from clipper.core.h Point conversion constructor
 impl From<&Point64> for PointD {
     fn from(value: &Point64) -> Self {
         Self {
@@ -1751,22 +1753,26 @@ where
     sqr(a * d - c * b) / (c * c + d * d)
 }
 
+/// Generate an elliptical path inscribed in a rectangle
+/// Direct port from clipper.core.h Ellipse(const Rect<T>&) overload
 pub fn ellipse_rect64(rect: &Rect64, steps: usize) -> Path64 {
-    return ellipse_point64(
+    ellipse_point64(
         rect.mid_point(),
         rect.width() as f64 * 0.5,
         rect.height() as f64 * 0.5,
         steps,
-    );
+    )
 }
 
+/// Generate an elliptical path inscribed in a rectangle
+/// Direct port from clipper.core.h Ellipse(const Rect<T>&) overload
 pub fn ellipse_rect_d(rect: &RectD, steps: usize) -> PathD {
-    return ellipse_point_d(
+    ellipse_point_d(
         rect.mid_point(),
-        rect.width() as f64 * 0.5,
-        rect.height() as f64 * 0.5,
+        rect.width() * 0.5,
+        rect.height() * 0.5,
         steps,
-    );
+    )
 }
 
 /// Generate an elliptical path around a center point

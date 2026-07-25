@@ -591,6 +591,8 @@ pub fn make_path_d(coords: &[f64]) -> PathD {
     result
 }
 
+/// Build a Path64 from x,y,z triples
+/// Direct port from clipper.h MakePathZ
 #[cfg(feature = "using_z")]
 pub fn make_path_z(coords: &[i64]) -> Path64 {
     let size = coords.len() / 3;
@@ -605,6 +607,8 @@ pub fn make_path_z(coords: &[i64]) -> Path64 {
     result
 }
 
+/// Build a PathD from x,y,z triples (z truncated to integer as in C++)
+/// Direct port from clipper.h MakePathZD
 #[cfg(feature = "using_z")]
 pub fn make_path_zd(coords: &[f64]) -> PathD {
     let size = coords.len() / 3;
@@ -616,7 +620,7 @@ pub fn make_path_zd(coords: &[f64]) -> PathD {
             z: coords[i * 3 + 2] as i64,
         });
     }
-    return result;
+    result
 }
 
 // ============================================================================

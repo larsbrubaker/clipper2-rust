@@ -55,7 +55,7 @@ fn test1_64() {
     c64.execute(ClipType::Union, FillRule::NonZero, &mut solution, None);
 
     let mut ellipses = Paths64::new();
-    if solution.len() > 0 {
+    if !solution.is_empty() {
         // draw circles around intersection points - flagged by z == 1
         let r = 3.0;
         for pt in solution[0].iter() {
@@ -90,7 +90,7 @@ fn test1_double() {
     c.execute(ClipType::Union, FillRule::NonZero, &mut solution, None);
 
     let mut ellipses = PathsD::new();
-    if solution.len() > 0 {
+    if !solution.is_empty() {
         // draw circles around intersection points
         let r = 3.0;
         for pt in solution[0].iter() {
