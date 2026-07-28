@@ -22,47 +22,13 @@ When a bug is reported, always follow this workflow:
 2. **Fix the bug** - Make the minimal change needed to address the issue
 3. **Verify via passing test** - The previously failing test should now pass
 
-This approach works because:
-- The failing test proves you understand the bug
-- The fix is verifiable, not just "looks right"
-- You can't accidentally break it again (regression protection)
-- It aligns with the principle that coding is high-leverage because it's **partially verifiable**
-
 **Do not skip the reproducing test.** Even if the fix seems obvious, the test validates your understanding and prevents regressions.
 
 ## Testing
 
 - Tests MUST test actual production code, not copies - Never duplicate production logic in tests. Import and call the real code. Tests that verify copied code prove nothing about the actual system.
-- Tests should run as fast as possible—fast tests get run more often
-- Write tests for regressions and complex logic
-- Avoid redundant tests that verify the same behavior
-- All tests must pass before merging
 - Tests must verify **exact behavioral match** with the C++ implementation
 - When test failures occur, use the fix-test-failures agent (`.claude/agents/fix-test-failures.md`) — it treats all failures as real bugs and resolves them through instrumentation and root cause analysis, never by weakening tests
-
-**Running tests:**
-```bash
-# Run all tests
-cargo test
-
-# Run tests for a specific module
-cargo test --lib core_tests
-cargo test --lib engine_tests
-
-# Run a specific test
-cargo test test_name -- --exact
-
-# Run with output
-cargo test -- --nocapture
-```
-
-## Code Quality
-
-**Names** - Choose carefully. Good names make code self-documenting. Rust names should follow Rust conventions (`snake_case` for functions/variables, `PascalCase` for types, `SCREAMING_SNAKE_CASE` for constants).
-
-**Comments** - Explain *why*, not *what*. The code shows what it does; comments should reveal intent, tradeoffs, and non-obvious reasoning. When porting from C++, comments explaining *why* the Rust approach differs from C++ are especially valuable.
-
-**Refactoring** - Improve code when it serves a purpose, not for aesthetics. Refactor to fix bugs, add features, or improve clarity when you're already working in that area.
 
 ## C++ to Rust Porting Rules
 
