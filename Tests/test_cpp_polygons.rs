@@ -218,3 +218,34 @@ fn test_collinear_on_macos_issue_777() {
     assert_eq!(solution[0].len(), 3);
     assert_eq!(is_positive(&subject[0]), is_positive(&solution[0]));
 }
+
+// ==========================================================================
+// clipper2-rust issue #9 - union of triangles sharing axis-aligned edges
+// left a zero-width spur (C++ Clipper2 returns the clean diamond)
+// ==========================================================================
+
+#[test]
+fn test_union_axis_aligned_triangles_no_spur_issue_9() {
+    // A diamond with vertices (+-2,0), (0,+-2), triangulated as two rings
+    // around the origin. Several triangle edges lie on the x and y axes.
+    let subjects = vec![
+        clipper2_rust::make_path64(&[0, 0, 1, 0, 0, 1]),
+        clipper2_rust::make_path64(&[1, 0, 2, 0, 0, 2]),
+        clipper2_rust::make_path64(&[1, 0, 0, 2, 0, 1]),
+        clipper2_rust::make_path64(&[0, 0, 0, 1, -1, 0]),
+        clipper2_rust::make_path64(&[0, 1, 0, 2, -2, 0]),
+        clipper2_rust::make_path64(&[0, 1, -2, 0, -1, 0]),
+        clipper2_rust::make_path64(&[0, 0, -1, 0, 0, -1]),
+        clipper2_rust::make_path64(&[-1, 0, -2, 0, 0, -2]),
+        clipper2_rust::make_path64(&[-1, 0, 0, -2, 0, -1]),
+        clipper2_rust::make_path64(&[0, 0, 0, -1, 1, 0]),
+        clipper2_rust::make_path64(&[0, -1, 0, -2, 2, 0]),
+        clipper2_rust::make_path64(&[0, -1, 2, 0, 1, 0]),
+    ];
+
+    let solution = clipper2_rust::union_subjects_64(&subjects, FillRule::NonZero);
+    assert_eq!(solution.len(), 1);
+    // C++ Clipper2 returns [(0,2), (-2,0), (0,-2), (2,0)]
+    assert_eq!(solution[0].len(), 4, "unexpected spur: {:?}", solution[0]);
+    assert_eq!(area(&solution[0]), 8.0);
+}

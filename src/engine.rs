@@ -3099,7 +3099,7 @@ impl ClipperBase {
             return;
         }
 
-        let start_op = self.outrec_list[or_idx].pts.unwrap();
+        let mut start_op = self.outrec_list[or_idx].pts.unwrap();
         let mut op2 = start_op;
         loop {
             let prev = self.outpt_arena[op2].prev;
@@ -3122,14 +3122,11 @@ impl ClipperBase {
                     self.dispose_out_pts(or_idx);
                     return;
                 }
-                // Reset start
+                start_op = op2;
                 continue;
             }
             op2 = next;
-            if op2 == start_op
-                || (self.outrec_list[or_idx].pts.is_some()
-                    && op2 == self.outrec_list[or_idx].pts.unwrap())
-            {
+            if op2 == start_op {
                 break;
             }
         }
