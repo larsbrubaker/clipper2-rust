@@ -34,9 +34,9 @@ If you find it useful, here are a few ways to help keep development going:
 
 This port is **feature-complete** — all core algorithms have been ported and verified against the original C++ implementation.
 
-- **456 tests** (403 unit + 53 integration), all passing, 0 ignored
+- **457 tests** (403 unit + 54 integration), all passing, 0 ignored; 477 with the `using_z` feature
 - **Exact behavioral match** with C++ on all test cases, including edge cases from 20+ GitHub issues
-- **4 examples** demonstrating clipping, offsetting, rectangle clipping, and benchmarking
+- **5 examples** demonstrating clipping, offsetting, rectangle clipping, z-callbacks, and benchmarking
 - **6 Criterion benchmarks** covering boolean ops, offsetting, rect clipping, and simplification
 
 ## Overview
@@ -57,6 +57,7 @@ This port was created by [MatterHackers](https://www.matterhackers.com) using [C
 - **Multiple Precision**: Integer (`i64`) and floating-point (`f64`) coordinate support
 - **PolyTree Structure**: Hierarchical representation of polygon parent/child/hole relationships
 - **Face Extraction**: `poly_tree_to_faces64` flattens a `PolyTree64` into `PolyFace64` solid faces, each owning its immediate holes
+- **Z Coordinates** (optional `using_z` feature): mirrors the C++ `USINGZ` build — adds a `z` field to points, z-callbacks on `Clipper64`/`ClipperD`/`ClipperOffset`, and z-preservation through clipping and offsetting
 - **SVG Output**: Built-in SVG writer for visualization and debugging
 - **100% Safe Rust**: Zero `unsafe` blocks — enforced at compile time with `#![forbid(unsafe_code)]`
 
@@ -89,7 +90,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-clipper2-rust = "1.1"
+clipper2-rust = "1.2"
 ```
 
 ### Boolean Operations
@@ -161,6 +162,7 @@ cargo run --example simple_clipping    # Boolean intersection with SVG output
 cargo run --example inflate_paths      # Path offsetting demo
 cargo run --example rect_clipping      # Rectangle clipping demo
 cargo run --example benchmark_cli      # Performance benchmark
+cargo run --example using_z --features using_z   # Z-callback demo
 ```
 
 ## Development
@@ -178,7 +180,8 @@ cargo build
 ### Testing
 
 ```bash
-cargo test                          # All 444 tests
+cargo test                          # All 457 tests
+cargo test --features using_z       # Adds the 20 using_z tests
 cargo test --lib core_tests         # Specific module
 cargo test test_name -- --exact     # Specific test
 ```
