@@ -1598,22 +1598,14 @@ where
 }
 
 /// Banker's rounding (round half to even), matching C++ nearbyint() behavior.
-/// MSRV 1.70 does not have f64::round_ties_even(), so we implement it manually.
+/// Non-finite input gives NaN, as the earlier software version did: `top_x`
+/// casts the result to `i64`, where NaN becomes 0 but infinity `i64::MAX`.
 #[inline]
 pub fn nearbyint_f64(x: f64) -> f64 {
-    let trunc = x.trunc();
-    let frac = x - trunc;
-    if frac.abs() < 0.5 {
-        trunc
-    } else if frac.abs() > 0.5 {
-        trunc + frac.signum()
+    if x.is_finite() {
+        x.round_ties_even()
     } else {
-        // Exactly 0.5: round to nearest even
-        if trunc % 2.0 == 0.0 {
-            trunc
-        } else {
-            trunc + frac.signum()
-        }
+        f64::NAN
     }
 }
 
