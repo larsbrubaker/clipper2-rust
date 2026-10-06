@@ -34,7 +34,7 @@ If you find it useful, here are a few ways to help keep development going:
 
 This port is **feature-complete** — all core algorithms have been ported and verified against the original C++ implementation.
 
-- **457 tests** (403 unit + 54 integration), all passing, 0 ignored; 477 with the `using_z` feature
+- **463 tests** (409 unit + 54 integration), all passing, 0 ignored; 483 with the `using_z` feature
 - **Exact behavioral match** with C++ on all test cases, including edge cases from 20+ GitHub issues
 - **5 examples** demonstrating clipping, offsetting, rectangle clipping, z-callbacks, and benchmarking
 - **6 Criterion benchmarks** covering boolean ops, offsetting, rect clipping, and simplification
@@ -169,7 +169,10 @@ cargo run --example using_z --features using_z   # Z-callback demo
 
 ### Prerequisites
 
-- Rust 1.77+ (2021 edition)
+- Rust 1.80+ to build and test this repository (the checked-in `Cargo.lock` is
+  version 4, and the locked dev-dependencies such as `criterion` need 1.80)
+- The library itself has a minimum supported Rust version of 1.77 (`rust-version`
+  in `Cargo.toml`), which is what crates.io users need
 
 ### Building
 
@@ -180,7 +183,7 @@ cargo build
 ### Testing
 
 ```bash
-cargo test                          # All 457 tests
+cargo test                          # All 463 tests
 cargo test --features using_z       # Adds the 20 using_z tests
 cargo test --lib core_tests         # Specific module
 cargo test test_name -- --exact     # Specific test

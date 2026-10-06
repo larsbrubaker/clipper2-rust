@@ -1597,9 +1597,11 @@ where
     }
 }
 
-/// Banker's rounding (round half to even), matching C++ nearbyint() behavior.
-/// Non-finite input gives NaN, as the earlier software version did: `top_x`
-/// casts the result to `i64`, where NaN becomes 0 but infinity `i64::MAX`.
+/// Banker's rounding (round half to even), matching C++ nearbyint() behavior
+/// for finite input.
+/// Non-finite input gives NaN (C++ nearbyint would return infinity unchanged):
+/// `top_x` casts the result to `i64`, where NaN becomes 0 but +infinity becomes
+/// `i64::MAX` and -infinity `i64::MIN`, either of which would overflow there.
 #[inline]
 pub fn nearbyint_f64(x: f64) -> f64 {
     if x.is_finite() {
