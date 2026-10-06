@@ -169,7 +169,7 @@ cargo run --example using_z --features using_z   # Z-callback demo
 
 ### Prerequisites
 
-- Rust 1.70+ (2021 edition)
+- Rust 1.77+ (2021 edition)
 
 ### Building
 

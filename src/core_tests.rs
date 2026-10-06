@@ -2210,6 +2210,159 @@ fn test_nearbyint_f64_basic() {
     assert_eq!(nearbyint_f64(-0.7), -1.0);
 }
 
+/// Asserts that `nearbyint_f64(x)` has the bits of `expected`, so that the
+/// sign of zero is checked too, or is NaN when `expected` is NaN.
+fn assert_nearbyint_is(x: f64, expected: f64) {
+    let actual = nearbyint_f64(x);
+    if expected.is_nan() {
+        assert!(
+            actual.is_nan(),
+            "nearbyint_f64({x:e}) = {actual:e}, expected NaN"
+        );
+    } else {
+        assert_eq!(
+            actual.to_bits(),
+            expected.to_bits(),
+            "nearbyint_f64({x:e}) = {actual:e}, expected {expected:e}"
+        );
+    }
+}
+
+/// Checks the properties that define round half to even, without computing
+/// the result another way: a finite `x` gives an integer `r` with the sign of
+/// `x`, within 0.5 of `x` and at most 1 from `x.trunc()`; at an exact tie `r`
+/// is even, and otherwise `r` is what `f64::round` (half away from zero)
+/// gives. A non-finite `x` gives NaN.
+fn assert_nearbyint_properties(x: f64) {
+    let r = nearbyint_f64(x);
+    if !x.is_finite() {
+        assert!(r.is_nan(), "nearbyint_f64({x:e}) = {r:e}, expected NaN");
+        return;
+    }
+    assert_eq!(
+        r.trunc(),
+        r,
+        "nearbyint_f64({x:e}) = {r:e} is not an integer"
+    );
+    assert_eq!(
+        r.is_sign_negative(),
+        x.is_sign_negative(),
+        "nearbyint_f64({x:e}) = {r:e} has the wrong sign"
+    );
+    // `x - x.trunc()` is exact, so the tie test below is too, and at a tie
+    // `x - r` is exactly 0.5 for either integer neighbour. From 2^52 on every
+    // f64 is an integer and both differences are 0.
+    let distance = (x - r).abs();
+    assert!(distance <= 0.5, "nearbyint_f64({x:e}) = {r:e} is too far");
+    let t = x.trunc();
+    assert!(
+        r == t || r == t - 1.0 || r == t + 1.0,
+        "nearbyint_f64({x:e}) = {r:e} is not trunc(x) or a neighbour"
+    );
+    if (x - t).abs() == 0.5 {
+        assert_eq!(distance, 0.5, "nearbyint_f64({x:e}) = {r:e} at a tie");
+        assert_eq!(r % 2.0, 0.0, "nearbyint_f64({x:e}) = {r:e} is odd");
+    } else {
+        assert_eq!(
+            r.to_bits(),
+            x.round().to_bits(),
+            "nearbyint_f64({x:e}) = {r:e}, but it is not a tie"
+        );
+    }
+}
+
+/// The two f64 values adjacent to a nonzero finite `x`: the one away from
+/// zero, then the one toward zero. The bits of an f64 order its magnitude, in
+/// either sign, so adding or subtracting 1 steps by one unit in the last
+/// place. (`f64::next_up` and `next_down` would say this directly, but they
+/// need Rust 1.86 and the crate's `rust-version` is 1.77.)
+fn neighbours(x: f64) -> [f64; 2] {
+    [
+        f64::from_bits(x.to_bits() + 1),
+        f64::from_bits(x.to_bits() - 1),
+    ]
+}
+
+#[test]
+fn test_nearbyint_f64_known_values() {
+    // 2^52: from here on every f64 is an integer
+    const TWO_52: f64 = 4_503_599_627_370_496.0;
+    for (x, expected) in [
+        // Signed zeros keep their sign, and so do results that round to zero
+        (0.0, 0.0),
+        (-0.0, -0.0),
+        (0.4, 0.0),
+        (-0.4, -0.0),
+        (0.6, 1.0),
+        (-0.6, -1.0),
+        // Ties go to the even neighbour, up or down, in both signs
+        (0.5, 0.0),
+        (-0.5, -0.0),
+        (1.5, 2.0),
+        (-1.5, -2.0),
+        (2.5, 2.0),
+        (-2.5, -2.0),
+        (3.5, 4.0),
+        (-3.5, -4.0),
+        // Just below and just above a tie
+        (0.499_999_999_999_999_94, 0.0),
+        (0.500_000_000_000_000_1, 1.0),
+        (-0.499_999_999_999_999_94, -0.0),
+        (-0.500_000_000_000_000_1, -1.0),
+        (2.499_999_999_999_999_6, 2.0),
+        (2.500_000_000_000_000_4, 3.0),
+        (-2.499_999_999_999_999_6, -2.0),
+        (-2.500_000_000_000_000_4, -3.0),
+        // The largest ties (2^52 - 0.5 and 2^52 - 1.5), and integers from 2^52
+        (TWO_52 - 0.5, TWO_52),
+        (-(TWO_52 - 0.5), -TWO_52),
+        (TWO_52 - 1.5, TWO_52 - 2.0),
+        (TWO_52, TWO_52),
+        (TWO_52 + 1.0, TWO_52 + 1.0),
+        (-(TWO_52 + 1.0), -(TWO_52 + 1.0)),
+        (2.0 * TWO_52 + 2.0, 2.0 * TWO_52 + 2.0),
+        // Huge values
+        (1e300, 1e300),
+        (f64::MAX, f64::MAX),
+        (f64::MIN, f64::MIN),
+        // Subnormals and the smallest normal round to a signed zero
+        (5e-324, 0.0),
+        (-5e-324, -0.0),
+        (f64::MIN_POSITIVE, 0.0),
+        (-f64::MIN_POSITIVE, -0.0),
+        // Non-finite input gives NaN (see `nearbyint_f64`)
+        (f64::INFINITY, f64::NAN),
+        (f64::NEG_INFINITY, f64::NAN),
+        (f64::NAN, f64::NAN),
+    ] {
+        assert_nearbyint_is(x, expected);
+        assert_nearbyint_properties(x);
+    }
+}
+
+#[test]
+fn test_nearbyint_f64_properties() {
+    // Every half-integer in a range, its two neighbours, and the integer i
+    for i in -100_000i64..100_000 {
+        let half = i as f64 + 0.5;
+        let [away, toward] = neighbours(half);
+        for x in [half, away, toward, i as f64] {
+            assert_nearbyint_properties(x);
+        }
+    }
+
+    // Deterministic xorshift64: arbitrary bit patterns (all exponents, both
+    // signs, NaNs and infinities), and values in the int64 coordinate range
+    let mut state: u64 = 0x9e37_79b9_7f4a_7c15;
+    for _ in 0..500_000 {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        assert_nearbyint_properties(f64::from_bits(state));
+        assert_nearbyint_properties((state >> 11) as f64 / 2048.0 - 2.0e12);
+    }
+}
+
 // Fix 3: get_closest_point_on_segment should use nearbyint before adding offset
 #[test]
 fn test_get_closest_point_on_segment_nearbyint() {
