@@ -945,3 +945,186 @@ fn test_top_x_bankers_rounding() {
         result
     );
 }
+
+// ============================================================================
+// Scanbeam shortcut tests
+// ============================================================================
+// When no edges cross in a scanbeam, build_intersect_list skips its merge sort
+// and do_top_of_scanbeam keeps the curr_x values it just computed. These tests
+// pin results taken before that change, on inputs where most scanbeams take
+// the shortcut (disjoint rings) and where few do (overlapping polygons).
+
+/// Deterministic xorshift64, so every platform builds the same inputs
+struct ShortcutTestRng(u64);
+
+impl ShortcutTestRng {
+    fn next(&mut self) -> u64 {
+        self.0 ^= self.0 << 13;
+        self.0 ^= self.0 >> 7;
+        self.0 ^= self.0 << 17;
+        self.0
+    }
+
+    fn range(&mut self, lo: i64, hi: i64) -> i64 {
+        lo + (self.next() % (hi - lo + 1) as u64) as i64
+    }
+}
+
+/// A grid of glyph-like shapes: in each 1000 x 1600 cell an irregular outer
+/// ring and, in about half the cells, a reversed inner ring (a hole). With
+/// `grow` 0 the cells are disjoint; a larger `grow` makes neighbours overlap.
+fn glyph_grid(rows: i64, cols: i64, grow: i64, rng: &mut ShortcutTestRng) -> Paths64 {
+    // 16 directions, 1000 * (cos, sin) rounded, so no trigonometry is needed
+    const DIRS: [(i64, i64); 16] = [
+        (1000, 0),
+        (924, 383),
+        (707, 707),
+        (383, 924),
+        (0, 1000),
+        (-383, 924),
+        (-707, 707),
+        (-924, 383),
+        (-1000, 0),
+        (-924, -383),
+        (-707, -707),
+        (-383, -924),
+        (0, -1000),
+        (383, -924),
+        (707, -707),
+        (924, -383),
+    ];
+    let ring = |cx: i64, cy: i64, rx: i64, ry: i64, rng: &mut ShortcutTestRng| {
+        let mut path = Path64::new();
+        for (i, &(dx, dy)) in DIRS.iter().enumerate() {
+            // Keep every fourth direction so the ring always encloses its center
+            if i % 4 != 0 && rng.next() % 3 == 0 {
+                continue;
+            }
+            let shrink = rng.range(0, 60);
+            path.push(Point64::new(
+                cx + dx * (rx - shrink) / 1000,
+                cy + dy * (ry - shrink) / 1000,
+            ));
+        }
+        path
+    };
+    let mut paths = Paths64::new();
+    for row in 0..rows {
+        for col in 0..cols {
+            let (cx, cy) = (col * 1000, row * 1600);
+            paths.push(ring(cx, cy, 450 + grow, 750 + grow, rng));
+            if rng.next() % 2 == 0 {
+                let mut hole = ring(cx, cy, 200, 350, rng);
+                hole.reverse();
+                paths.push(hole);
+            }
+        }
+    }
+    paths
+}
+
+/// FNV-1a over the paths in order, so a test pins the exact output
+fn hash_paths(paths: &Paths64) -> u64 {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    let mut add = |v: i64| {
+        for b in v.to_le_bytes() {
+            hash ^= b as u64;
+            hash = hash.wrapping_mul(0x0100_0000_01b3);
+        }
+    };
+    add(paths.len() as i64);
+    for path in paths {
+        add(path.len() as i64);
+        for pt in path {
+            add(pt.x);
+            add(pt.y);
+        }
+    }
+    hash
+}
+
+fn execute_64(ct: ClipType, fr: FillRule, subjects: &Paths64, clips: &Paths64) -> Paths64 {
+    let mut clipper = Clipper64::new();
+    clipper.add_subject(subjects);
+    clipper.add_clip(clips);
+    let mut solution = Paths64::new();
+    assert!(clipper.execute(ct, fr, &mut solution, None));
+    solution
+}
+
+#[test]
+fn test_shortcut_union_of_disjoint_rings() {
+    let rings = glyph_grid(15, 20, 0, &mut ShortcutTestRng(1));
+    let solution = execute_64(ClipType::Union, FillRule::NonZero, &rings, &Paths64::new());
+    // Nothing overlaps, so every ring survives the union
+    assert_eq!(solution.len(), rings.len());
+    assert_eq!(solution.len(), 466);
+    assert_eq!(hash_paths(&solution), 0x36a6_7934_c492_34fd);
+}
+
+#[test]
+fn test_shortcut_union_of_overlapping_rings() {
+    let rings = glyph_grid(15, 20, 400, &mut ShortcutTestRng(2));
+    let solution = execute_64(ClipType::Union, FillRule::NonZero, &rings, &Paths64::new());
+    assert_eq!(solution.len(), 219);
+    assert_eq!(hash_paths(&solution), 0xd7cd_9076_8e6d_6f2e);
+}
+
+#[test]
+fn test_shortcut_random_polygons() {
+    let mut rng = ShortcutTestRng(3);
+    let mut random_paths = |count: usize| -> Paths64 {
+        (0..count)
+            .map(|_| {
+                let len = rng.range(3, 60) as usize;
+                (0..len)
+                    .map(|_| Point64::new(rng.range(0, 1000), rng.range(0, 800)))
+                    .collect()
+            })
+            .collect()
+    };
+    let subjects = random_paths(4);
+    let clips = random_paths(3);
+    for (ct, fr, len, hash) in [
+        (
+            ClipType::Union,
+            FillRule::NonZero,
+            171,
+            0x7353_766e_cd6a_bf5b,
+        ),
+        (
+            ClipType::Intersection,
+            FillRule::EvenOdd,
+            1040,
+            0xd67a_f9a6_2057_83de,
+        ),
+        (
+            ClipType::Difference,
+            FillRule::Positive,
+            36,
+            0x80bb_9c4e_0251_4886,
+        ),
+        (ClipType::Xor, FillRule::NonZero, 675, 0x6d1b_cd9f_2ff8_1acc),
+    ] {
+        let solution = execute_64(ct, fr, &subjects, &clips);
+        assert_eq!(solution.len(), len, "{:?}", ct);
+        assert_eq!(hash_paths(&solution), hash, "{:?}", ct);
+    }
+}
+
+#[test]
+fn test_shortcut_offsets_of_rings() {
+    use crate::offset::{EndType, JoinType};
+    let rings = glyph_grid(10, 12, 0, &mut ShortcutTestRng(4));
+    // Miter and square joins only: round joins use sin and cos, whose last
+    // bit may differ between platforms
+    for (delta, jt, len, hash) in [
+        (300.0, JoinType::Miter, 100, 0x4d2c_366f_e874_bfb5),
+        (120.0, JoinType::Square, 169, 0x4483_b31d_fb0a_1b4b),
+        (-80.0, JoinType::Miter, 181, 0xcf66_aec1_07da_b741),
+    ] {
+        let solution = crate::inflate_paths_64(&rings, delta, jt, EndType::Polygon, 2.0, 0.0);
+        assert_eq!(solution.len(), len, "delta {}", delta);
+        assert_eq!(hash_paths(&solution), hash, "delta {}", delta);
+    }
+}

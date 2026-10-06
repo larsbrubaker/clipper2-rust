@@ -1662,17 +1662,25 @@ impl ClipperBase {
     }
 
     /// Copy AEL to SEL and update curr_x for top_y
-    /// Direct port from clipper.engine.cpp AdjustCurrXAndCopyToSEL (line 2113)
-    fn adjust_curr_x_and_copy_to_sel(&mut self, top_y: i64) {
+    /// Port from clipper.engine.cpp AdjustCurrXAndCopyToSEL (line 2113); unlike
+    /// C++, also returns whether any edge's new curr_x is less than its left
+    /// neighbour's, i.e. whether any edges cross in this scanbeam.
+    fn adjust_curr_x_and_copy_to_sel(&mut self, top_y: i64) -> bool {
         let mut e_opt = self.actives;
         self.sel = e_opt;
+        let mut prev_x = i64::MIN;
+        let mut out_of_order = false;
         while let Some(e_idx) = e_opt {
-            self.active_arena[e_idx].prev_in_sel = self.active_arena[e_idx].prev_in_ael;
-            self.active_arena[e_idx].next_in_sel = self.active_arena[e_idx].next_in_ael;
-            self.active_arena[e_idx].jump = self.active_arena[e_idx].next_in_sel;
-            self.active_arena[e_idx].curr_x = top_x(&self.active_arena[e_idx], top_y);
-            e_opt = self.active_arena[e_idx].next_in_ael;
+            let e = &mut self.active_arena[e_idx];
+            e.prev_in_sel = e.prev_in_ael;
+            e.next_in_sel = e.next_in_ael;
+            e.jump = e.next_in_sel;
+            e.curr_x = top_x(e, top_y);
+            out_of_order |= e.curr_x < prev_x;
+            prev_x = e.curr_x;
+            e_opt = e.next_in_ael;
         }
+        out_of_order
     }
 
     // ---- Trim horizontal ----
@@ -2559,7 +2567,9 @@ impl ClipperBase {
     }
 
     /// Build the intersection list
-    /// Direct port from clipper.engine.cpp BuildIntersectList (line 2390)
+    /// Port from clipper.engine.cpp BuildIntersectList (line 2390); unlike C++,
+    /// returns before the merge sort when no edges cross, because the sort
+    /// would then find no intersections.
     fn build_intersect_list(&mut self, top_y: i64) -> bool {
         if self.actives.is_none() {
             return false;
@@ -2569,7 +2579,11 @@ impl ClipperBase {
             return false;
         }
 
-        self.adjust_curr_x_and_copy_to_sel(top_y);
+        // If the edges are still in order at top_y, the merge sort below
+        // would find no intersections and leave the SEL in AEL order
+        if !self.adjust_curr_x_and_copy_to_sel(top_y) {
+            return false;
+        }
 
         let mut left_opt = self.sel;
         // Check if we have a jump
@@ -2641,11 +2655,18 @@ impl ClipperBase {
     }
 
     /// Do intersections
-    /// Direct port from clipper.engine.cpp DoIntersections (line 2347)
-    fn do_intersections(&mut self, top_y: i64) {
+    /// Port from clipper.engine.cpp DoIntersections (line 2347); unlike C++,
+    /// returns whether every active edge's curr_x is still top_x(e, top_y),
+    /// i.e. curr_x was updated for top_y and no intersection moved it.
+    fn do_intersections(&mut self, top_y: i64) -> bool {
         if self.build_intersect_list(top_y) {
             self.process_intersect_list();
             self.intersect_nodes.clear();
+            false
+        } else {
+            // build_intersect_list updates curr_x when there are 2+ edges
+            self.actives
+                .is_some_and(|e| self.active_arena[e].next_in_ael.is_some())
         }
     }
 
@@ -2687,8 +2708,11 @@ impl ClipperBase {
     // ---- Top of scanbeam ----
 
     /// Process the top of a scanbeam
-    /// Direct port from clipper.engine.cpp DoTopOfScanbeam (line 2708)
-    fn do_top_of_scanbeam(&mut self, y: i64) {
+    /// Port from clipper.engine.cpp DoTopOfScanbeam (line 2708); unlike C++,
+    /// doesn't recompute curr_x for edges that don't end at y when
+    /// `curr_x_is_top_x` (do_intersections' result for the same y) says it
+    /// already holds top_x(e, y).
+    fn do_top_of_scanbeam(&mut self, y: i64, curr_x_is_top_x: bool) {
         self.sel = None;
         let mut e_opt = self.actives;
         while let Some(e_idx) = e_opt {
@@ -2707,7 +2731,7 @@ impl ClipperBase {
                         self.push_horz(e_idx);
                     }
                 }
-            } else {
+            } else if !curr_x_is_top_x {
                 self.active_arena[e_idx].curr_x = top_x(&self.active_arena[e_idx], y);
             }
             e_opt = self.active_arena[e_idx].next_in_ael;
@@ -3465,8 +3489,8 @@ impl ClipperBase {
                 None => break,
             }
 
-            self.do_intersections(y);
-            self.do_top_of_scanbeam(y);
+            let curr_x_is_top_x = self.do_intersections(y);
+            self.do_top_of_scanbeam(y, curr_x_is_top_x);
 
             while let Some(e) = self.pop_horz() {
                 self.do_horizontal(e);

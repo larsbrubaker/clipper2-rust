@@ -39,6 +39,38 @@ fn bench_boolean_union(c: &mut Criterion) {
     });
 }
 
+fn bench_union_disjoint_rings(c: &mut Criterion) {
+    // A grid of glyph-like shapes that don't touch, like a page of text:
+    // an outer ring per cell and a hole in about half of them
+    let mut rng = StdRng::seed_from_u64(7);
+    let mut subject = Vec::new();
+    for row in 0..40 {
+        for col in 0..50 {
+            let center = Point64::new(col * 1_000_000, row * 1_600_000);
+            subject.push(clipper2_rust::ellipse_point64(
+                center,
+                rng.gen_range(400_000.0..450_000.0),
+                rng.gen_range(700_000.0..750_000.0),
+                rng.gen_range(8..48),
+            ));
+            if rng.gen_bool(0.5) {
+                let mut hole = clipper2_rust::ellipse_point64(
+                    center,
+                    rng.gen_range(150_000.0..200_000.0),
+                    rng.gen_range(300_000.0..350_000.0),
+                    rng.gen_range(8..24),
+                );
+                hole.reverse();
+                subject.push(hole);
+            }
+        }
+    }
+
+    c.bench_function("union_disjoint_rings_2000", |b| {
+        b.iter(|| clipper2_rust::union_subjects_64(&subject, FillRule::NonZero))
+    });
+}
+
 fn bench_inflate_round(c: &mut Criterion) {
     let paths = vec![clipper2_rust::make_path64(&[
         0, 0, 100, 0, 100, 100, 200, 100, 200, 0, 300, 0, 300, 200, 0, 200,
@@ -110,6 +142,7 @@ criterion_group!(
     benches,
     bench_boolean_intersection,
     bench_boolean_union,
+    bench_union_disjoint_rings,
     bench_inflate_round,
     bench_inflate_miter,
     bench_rect_clip,
