@@ -18,7 +18,7 @@ fn find_files_with_extensions(dir: &Path, extensions: &[&str]) -> Vec<PathBuf> {
                         || dir_name.starts_with('.')
                         || dir_name == "CPP"
                         || dir_name == "pkg"
-                        || dir_name == "Tests"
+                        || dir_name == "tests"
                     {
                         continue;
                     }
@@ -174,11 +174,8 @@ fn test_project_structure_health() {
         }
     }
 
-    let average_lines = if file_count > 0 {
-        total_lines / file_count
-    } else {
-        0
-    };
+    // No files read gives an average of 0 rather than a division by zero.
+    let average_lines = total_lines.checked_div(file_count).unwrap_or(0);
 
     println!("📊 Clipper2 Rust Project Statistics:");
     println!("  - Total files analyzed: {}", file_count);

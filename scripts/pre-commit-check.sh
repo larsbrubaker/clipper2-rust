@@ -60,7 +60,7 @@ else
 fi
 
 # Skip integration tests if they don't exist
-if [ -d "Tests" ] && find Tests -name "*.rs" -not -name "file_length_validation.rs" | grep -q .; then
+if [ -d "tests" ] && find tests -name "*.rs" -not -name "file_length_validation.rs" | grep -q .; then
     echo -e "\n${YELLOW}🔗 Running integration tests...${NC}"
     if cargo test --test "*" --quiet; then
         echo -e "${GREEN}✅ Integration tests passed${NC}"

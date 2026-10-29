@@ -10,7 +10,7 @@ use clipper2_rust::engine_public::*;
 use clipper2_rust::utils::file_io;
 
 fn test_data_path(name: &str) -> String {
-    format!("{}/Tests/data/{}", env!("CARGO_MANIFEST_DIR"), name)
+    format!("{}/tests/data/{}", env!("CARGO_MANIFEST_DIR"), name)
 }
 
 /// Helper: recursively check if a point is contained in a polytree

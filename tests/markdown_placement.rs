@@ -1,4 +1,4 @@
-// Tests/markdown_placement.rs — the Markdown placement gate (CLAUDE.md,
+// tests/markdown_placement.rs — the Markdown placement gate (CLAUDE.md,
 // "Documentation"). Documentation lives in the code, in the header and doc
 // comments of the code it describes, where whoever works on that code reads
 // it. A Markdown file is allowed only where it is not documentation of code:
@@ -8,7 +8,10 @@
 //     port was made, kept by choice, not documentation of the code;
 //   - license and notice files (`LICENSE.md`, `NOTICE.md`,
 //     `THIRD_PARTY_NOTICES.md`, ...) anywhere;
-//   - anything under `.claude/` or `.cursor/` (agent instructions).
+//   - anything under `.claude/` or `.cursor/` (agent instructions);
+//   - an idea for later, written down when Lars asks for it, directly in
+//     `docs/later/` (`docs/later/<idea>.md`, one level only): not scheduled
+//     work, deleted when it is built or dropped.
 //
 // Every other `.md` or `.markdown` file (any case) fails the gate, named with
 // what to do about it. The walk reads the file system, so an untracked file
@@ -17,7 +20,7 @@
 // a local C++ reference tree (`CPP/`, `cpp-reference/`) and agent worktrees.
 //
 // The crate is published to crates.io, whose package has no `.git` (and no
-// `Tests/`); there the gate has no repository to judge and passes without
+// `tests/`); there the gate has no repository to judge and passes without
 // checking.
 
 use std::path::{Path, PathBuf};
@@ -62,12 +65,18 @@ fn placement(path: &str) -> Placement {
         return Placement::NotMarkdown;
     }
     let under = |tree: &str| path.strip_prefix(tree).is_some_and(|rest| !rest.is_empty());
+    // Directly in the folder, not in a subfolder of it.
+    let directly_in = |dir: &str| {
+        path.strip_prefix(dir)
+            .is_some_and(|rest| !rest.is_empty() && !rest.contains('/'))
+    };
     let allowed = matches!(
         path,
         "README.md" | "CLAUDE.md" | "HOW_WE_PORTED_CLIPPER2.md"
     ) || is_license_or_notice(path)
         || under(".claude/")
-        || under(".cursor/");
+        || under(".cursor/")
+        || directly_in("docs/later/");
     if allowed {
         Placement::Allowed
     } else {
@@ -239,7 +248,7 @@ fn markdown_placement_refuses_docs_anywhere_else() {
         "PORTING_PLAN.md",
         "src/README.md",
         "src/offset/NOTES.md",
-        "Tests/data/README.md",
+        "tests/data/README.md",
         "demo/README.md",
         "examples/README.md",
         "benches/README.md",
@@ -252,6 +261,20 @@ fn markdown_placement_refuses_docs_anywhere_else() {
     // Not Markdown, so not this gate's concern.
     for path in ["src/lib.rs", "docs/demo-screenshot.png", "README", ".md"] {
         assert_eq!(placement(path), Placement::NotMarkdown, "{path}");
+    }
+}
+
+#[test]
+fn markdown_placement_allows_ideas_for_later_directly_in_docs_later() {
+    assert_eq!(placement("docs/later/idea.md"), Placement::Allowed);
+    for path in [
+        "docs/later/sub/idea.md",
+        "docs/other.md",
+        "docs/later.md",
+        "docs/laterx/idea.md",
+        "src/docs/later/idea.md",
+    ] {
+        assert_eq!(placement(path), Placement::Refused, "{path}");
     }
 }
 

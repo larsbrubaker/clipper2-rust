@@ -15,7 +15,7 @@ documentation = "https://docs.rs/clipper2-rust/"
 readme = "README.md"
 keywords = ["polygon", "clipping", "geometry", "offsetting", "2d"]
 categories = ["algorithms", "graphics", "mathematics"]
-exclude = ["demo/", "docs/", "Tests/", ".github/", ".claude/", "benches/", "scripts/", "CLAUDE.md", "nul"]
+exclude = ["demo/", "docs/", "tests/", ".github/", ".claude/", "benches/", "scripts/", "CLAUDE.md", "nul"]
 
 [features]
 default = []

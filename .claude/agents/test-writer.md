@@ -43,7 +43,7 @@ Test files are co-located with source in `src/`:
 - `src/minkowski_tests.rs` - Minkowski sum/diff tests
 - `src/clipper_tests.rs` - High-level Clipper API tests
 
-Test data files (ported from C++ test suite) are in `Tests/data/`.
+Test data files (ported from C++ test suite) are in `tests/data/`.
 
 ## Core Testing Principles
 
@@ -182,7 +182,7 @@ fn test_collinear_points() {
 ```rust
 #[test]
 fn test_polygon_clipping_from_file() {
-    let test_data = load_test_file("Tests/Polygons.txt");
+    let test_data = load_test_file("tests/data/Polygons.txt");
     for test_case in test_data {
         let mut clipper = Clipper64::new();
         clipper.add_subject(&test_case.subjects);

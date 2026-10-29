@@ -50,8 +50,8 @@ try {
 }
 
 # Skip integration tests if they don't exist or only contain file_length_validation
-if (Test-Path "Tests") {
-    $integrationTests = Get-ChildItem -Path "Tests" -Filter "*.rs" | Where-Object { $_.Name -ne "file_length_validation.rs" }
+if (Test-Path "tests") {
+    $integrationTests = Get-ChildItem -Path "tests" -Filter "*.rs" | Where-Object { $_.Name -ne "file_length_validation.rs" }
     if ($integrationTests.Count -gt 0) {
         Write-Host "`n🔗 Running integration tests..." -ForegroundColor Yellow
         try {

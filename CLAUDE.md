@@ -37,8 +37,10 @@ When a bug is reported, always follow this workflow:
   reasons go there; history and "as of" status are left to git.
 - Markdown lives only in `README.md` and `CLAUDE.md` at the root, `HOW_WE_PORTED_CLIPPER2.md`
   (a public story about the port, kept by choice), license and notice files, and `.claude/` and
-  `.cursor/` (agent instructions). The gate `Tests/markdown_placement.rs` fails on any other `.md`
+  `.cursor/` (agent instructions). The gate `tests/markdown_placement.rs` fails on any other `.md`
   file, untracked ones included; never add a Markdown doc.
+- An idea for later, written down when Lars asks for it, lives in `docs/later/<idea>.md`: it is
+  not scheduled work and needs no plan entry; delete it when it is built or dropped.
 
 ## C++ to Rust Porting Rules
 
@@ -71,4 +73,4 @@ This project uses **PowerShell** on Windows. Heredocs (`<<'EOF'`) don't work —
 
 ## C++ Reference
 
-The original C++ source code is available at [github.com/AngusJohnson/Clipper2](https://github.com/AngusJohnson/Clipper2) for reference. Test data files ported from the C++ test suite are in `Tests/data/`.
+The original C++ source code is available at [github.com/AngusJohnson/Clipper2](https://github.com/AngusJohnson/Clipper2) for reference. Test data files ported from the C++ test suite are in `tests/data/`.
