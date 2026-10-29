@@ -30,6 +30,16 @@ When a bug is reported, always follow this workflow:
 - Tests must verify **exact behavioral match** with the C++ implementation
 - When test failures occur, use the fix-test-failures agent (`.claude/agents/fix-test-failures.md`) — it treats all failures as real bugs and resolves them through instrumentation and root cause analysis, never by weakening tests
 
+## Documentation
+
+- Documentation lives in the code: the header comment of the file or module it describes,
+  and doc comments on the items, where whoever works on that code reads it. Facts and
+  reasons go there; history and "as of" status are left to git.
+- Markdown lives only in `README.md` and `CLAUDE.md` at the root, `HOW_WE_PORTED_CLIPPER2.md`
+  (a public story about the port, kept by choice), license and notice files, and `.claude/`
+  (agent instructions). The gate `Tests/markdown_placement.rs` fails on any other `.md`
+  file, untracked ones included; never add a Markdown doc.
+
 ## C++ to Rust Porting Rules
 
 This project is a strict port of the Clipper2 C++ library to Rust. These rules ensure fidelity:
