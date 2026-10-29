@@ -959,19 +959,21 @@ impl RectClip64 {
             self.results[op2_owner] = Some(op2);
 
             // Get ready for the next loop
-            let op_is_larger;
-            let op2_is_larger;
-            if is_horz {
+            let (op_is_larger, op2_is_larger) = if is_horz {
                 let op_prev = self.arena[op].prev;
                 let op2_prev = self.arena[op2].prev;
-                op_is_larger = self.arena[op].pt.x > self.arena[op_prev].pt.x;
-                op2_is_larger = self.arena[op2].pt.x > self.arena[op2_prev].pt.x;
+                (
+                    self.arena[op].pt.x > self.arena[op_prev].pt.x,
+                    self.arena[op2].pt.x > self.arena[op2_prev].pt.x,
+                )
             } else {
                 let op_prev = self.arena[op].prev;
                 let op2_prev = self.arena[op2].prev;
-                op_is_larger = self.arena[op].pt.y > self.arena[op_prev].pt.y;
-                op2_is_larger = self.arena[op2].pt.y > self.arena[op2_prev].pt.y;
-            }
+                (
+                    self.arena[op].pt.y > self.arena[op_prev].pt.y,
+                    self.arena[op2].pt.y > self.arena[op2_prev].pt.y,
+                )
+            };
 
             let op_next = self.arena[op].next;
             let op_prev = self.arena[op].prev;
