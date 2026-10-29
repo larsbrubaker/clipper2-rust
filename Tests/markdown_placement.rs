@@ -8,7 +8,7 @@
 //     port was made, kept by choice, not documentation of the code;
 //   - license and notice files (`LICENSE.md`, `NOTICE.md`,
 //     `THIRD_PARTY_NOTICES.md`, ...) anywhere;
-//   - anything under `.claude/` (agent instructions).
+//   - anything under `.claude/` or `.cursor/` (agent instructions).
 //
 // Every other `.md` or `.markdown` file (any case) fails the gate, named with
 // what to do about it. The walk reads the file system, so an untracked file
@@ -66,7 +66,8 @@ fn placement(path: &str) -> Placement {
         path,
         "README.md" | "CLAUDE.md" | "HOW_WE_PORTED_CLIPPER2.md"
     ) || is_license_or_notice(path)
-        || under(".claude/");
+        || under(".claude/")
+        || under(".cursor/");
     if allowed {
         Placement::Allowed
     } else {
@@ -223,6 +224,7 @@ fn markdown_placement_allows_the_listed_places() {
         "demo/wasm/LICENSE.md",
         ".claude/agents/code-reviewer.md",
         ".claude/skills/checkin/SKILL.md",
+        ".cursor/rules/porting.md",
     ] {
         assert_eq!(placement(path), Placement::Allowed, "{path}");
     }
@@ -241,7 +243,9 @@ fn markdown_placement_refuses_docs_anywhere_else() {
         "demo/README.md",
         "examples/README.md",
         "benches/README.md",
-        ".cursor/rules.md",
+        // Only a name that starts like an agent directory.
+        ".cursorrules.md",
+        ".claude.md",
     ] {
         assert_eq!(placement(path), Placement::Refused, "{path}");
     }
@@ -270,6 +274,7 @@ fn markdown_gate_reads_untracked_files_and_skips_build_trees() {
     let tree = TempTree::new("markdown");
     tree.write("README.md", "readme\n");
     tree.write("HOW_WE_PORTED_CLIPPER2.md", "the story\n");
+    tree.write(".cursor/rules/porting.md", "agent rules\n");
     tree.write("docs/old-status.md", "a stray doc\n");
     tree.write("src/offset/notes.markdown", "another\n");
     for skipped in [

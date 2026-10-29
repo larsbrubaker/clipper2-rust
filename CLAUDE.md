@@ -36,8 +36,8 @@ When a bug is reported, always follow this workflow:
   and doc comments on the items, where whoever works on that code reads it. Facts and
   reasons go there; history and "as of" status are left to git.
 - Markdown lives only in `README.md` and `CLAUDE.md` at the root, `HOW_WE_PORTED_CLIPPER2.md`
-  (a public story about the port, kept by choice), license and notice files, and `.claude/`
-  (agent instructions). The gate `Tests/markdown_placement.rs` fails on any other `.md`
+  (a public story about the port, kept by choice), license and notice files, and `.claude/` and
+  `.cursor/` (agent instructions). The gate `Tests/markdown_placement.rs` fails on any other `.md`
   file, untracked ones included; never add a Markdown doc.
 
 ## C++ to Rust Porting Rules
