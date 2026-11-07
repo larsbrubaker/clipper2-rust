@@ -3,28 +3,27 @@
 //! `clipper.triangulation.cpp` (Boost Software License 1.0).
 //!
 //! Uses index arenas instead of C++ pointers, with the same sweep, intersection
-//! repair, and optional Delaunay edge flips. Includes the edge-through-vertex
-//! correction discussed in PolyClipping/Clipper2 issue #12.
+//! repair, and optional Delaunay edge flips. New edges stop at or avoid live
+//! vertices on their interiors, preventing overlapping triangles.
 //!
 //! Outer paths must have positive signed area and holes negative signed area
 //! (CCW outers / CW holes in Cartesian coordinates). Reversing all paths is
 //! supported. Self-intersecting paths should first be resolved with `union`.
 
-use crate::core::{
-    cross_product_sign, distance_sqr, scale_paths_uniform, Path64, Paths64, PathsD, Point64,
-};
+use crate::core::{cross_product_sign, scale_paths_uniform, sqr, Path64, Paths64, PathsD, Point64};
 
 /// Outcome of triangulation, matching the C++ `TriangulateResult` values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(C)]
 pub enum TriangulateResult {
     /// Triangulation completed successfully.
-    Success,
+    Success = 0,
     /// A required connecting edge could not be found.
-    Fail,
+    Fail = 1,
     /// No polygon with at least three usable vertices was supplied.
-    NoPolygons,
+    NoPolygons = 2,
     /// Input edges intersect beyond the rounding tolerance.
-    PathsIntersect,
+    PathsIntersect = 3,
 }
 
 /// Triangulate integer polygons, replacing `solution` with positive-area triangles.
@@ -66,6 +65,7 @@ pub fn triangulate_d(
     result
 }
 
+// Arena indices never move. NONE is a missing link and is checked before indexing.
 const NONE: usize = usize::MAX;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -143,16 +143,22 @@ fn in_circle(a: Point64, b: Point64, c: Point64, d: Point64) -> f64 {
     a0 * (b1 * c2 - c1 * b2) - b0 * (a1 * c2 - c1 * a2) + c0 * (a1 * b2 - b1 * a2)
 }
 
+// Match C++ DistSqr/DistanceSqr: subtract integers before converting to f64.
+// Converting coordinates first loses short edges at large coordinate offsets.
+fn squared_distance(a: Point64, b: Point64) -> f64 {
+    sqr(a.x - b.x) + sqr(a.y - b.y)
+}
+
 fn shortest_dist(pt: Point64, a: Point64, b: Point64) -> f64 {
     let (dx, dy) = ((b.x - a.x) as f64, (b.y - a.y) as f64);
     let (ax, ay) = ((pt.x - a.x) as f64, (pt.y - a.y) as f64);
     let q = ax * dx + ay * dy;
     if q < 0.0 {
-        distance_sqr(pt, a)
+        squared_distance(pt, a)
     } else if q > dx * dx + dy * dy {
-        distance_sqr(pt, b)
+        squared_distance(pt, b)
     } else {
-        (ax * dy - dx * ay).powi(2) / (dx * dx + dy * dy)
+        sqr(ax * dy - dx * ay) / (dx * dx + dy * dy)
     }
 }
 
@@ -620,7 +626,7 @@ impl Delaunay {
             }
             e = edge.next;
         }
-        // Issue #12: stop at the nearest live vertex on this segment. Shortening
+        // Stop at the nearest live vertex on this segment. Shortening
         // the same segment cannot turn an earlier rejected vertex into a match.
         for &v in &self.vertex_order {
             if v != above
@@ -735,7 +741,7 @@ impl Delaunay {
                 {
                     return;
                 }
-                // Issue #12: never create a loose edge through another live vertex.
+                // Never create a loose edge through another live vertex.
                 if self.has_vertex_on_segment_interior(self.pt(alt), self.pt(v)) {
                     return;
                 }
@@ -964,9 +970,9 @@ impl Delaunay {
         let count = self.vertices.len() - start;
         if count < 3
             || (count == 3
-                && (distance_sqr(self.pt(start), self.pt(start + 1)) <= 1.0
-                    || distance_sqr(self.pt(start + 1), self.pt(start + 2)) <= 1.0
-                    || distance_sqr(self.pt(start + 2), self.pt(start)) <= 1.0))
+                && (squared_distance(self.pt(start), self.pt(start + 1)) <= 1.0
+                    || squared_distance(self.pt(start + 1), self.pt(start + 2)) <= 1.0
+                    || squared_distance(self.pt(start + 2), self.pt(start)) <= 1.0))
         {
             for v in &mut self.vertices[start..] {
                 v.edges.clear();
@@ -974,3 +980,7 @@ impl Delaunay {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "triangulation_tests.rs"]
+mod tests;

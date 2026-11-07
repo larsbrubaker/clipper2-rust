@@ -100,7 +100,7 @@ fn float_paths_and_precision_clamping() {
         clipper2_rust::PointD::new(10.1, 0.1),
         clipper2_rust::PointD::new(0.1, 10.1),
     ]];
-    for precision in [1, 8, 12] {
+    for precision in [-4, 0, 1, 8, 12] {
         let mut triangles = vec![];
         assert_eq!(
             triangulate_d(&paths, precision, &mut triangles, true),
@@ -108,6 +108,25 @@ fn float_paths_and_precision_clamping() {
         );
         assert_eq!(triangles.len(), 1);
         assert!((area(&triangles[0]) - 50.0).abs() < 1e-9);
+    }
+}
+
+#[test]
+fn large_coordinate_triangle_preserves_integer_differences() {
+    // Corrected C++ returns this triangle in both modes. Converting the
+    // coordinates to f64 before subtracting collapses these distinct vertices.
+    let offset = 1_i64 << 60;
+    let subject = make_path64(&[offset, offset, offset + 32, offset, offset, offset + 64]);
+    for delaunay in [false, true] {
+        let mut triangles = vec![];
+        assert_eq!(
+            triangulate_64(&vec![subject.clone()], &mut triangles, delaunay),
+            TriangulateResult::Success
+        );
+        assert_eq!(
+            canonical_triangles(triangles),
+            canonical_triangles(vec![subject.clone()])
+        );
     }
 }
 
@@ -162,12 +181,7 @@ fn check_cpp_reference(data: &str) {
         assert!(values.next().is_none());
         let mut actual = vec![];
         let status = triangulate_64(&paths, &mut actual, delaunay);
-        let status_code = match status {
-            TriangulateResult::Success => 0,
-            TriangulateResult::Fail => 1,
-            TriangulateResult::NoPolygons => 2,
-            TriangulateResult::PathsIntersect => 3,
-        };
+        let status_code = status as i64;
         assert_eq!(
             status_code,
             expected_status,
