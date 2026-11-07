@@ -322,3 +322,91 @@ pub fn polytree_op(clip_type: u8, fill_rule: u8, subjects: &[f64], clips: &[f64]
     result.push_str("]}");
     result
 }
+
+/// Triangulate packed integer paths. Errors become JavaScript exceptions;
+/// successful output uses the same packed-path format as the other operations.
+#[wasm_bindgen]
+pub fn triangulate(paths: &[f64], use_delaunay: bool) -> Result<Vec<f64>, JsValue> {
+    let input = decode_triangulation_paths(paths).map_err(JsValue::from_str)?;
+    let mut triangles = Vec::new();
+    match clipper2_rust::triangulate_64(&input, &mut triangles, use_delaunay) {
+        clipper2_rust::TriangulateResult::Success => Ok(encode_paths(&triangles)),
+        clipper2_rust::TriangulateResult::NoPolygons => {
+            Err(JsValue::from_str("No polygons to triangulate"))
+        }
+        clipper2_rust::TriangulateResult::PathsIntersect => Err(JsValue::from_str(
+            "Paths intersect; resolve intersections before triangulating",
+        )),
+        clipper2_rust::TriangulateResult::Fail => Err(JsValue::from_str(
+            "Triangulation failed: no connecting edge found",
+        )),
+    }
+}
+
+// Validate before allocating or casting. JavaScript numbers represent integers
+// exactly only through 2^53 - 1; reject malformed buffers rather than truncating.
+fn decode_triangulation_paths(buf: &[f64]) -> Result<Paths64, &'static str> {
+    let mut paths = Vec::new();
+    let mut i = 0;
+    while i < buf.len() {
+        let n = buf[i];
+        i += 1;
+        if !n.is_finite() || n < 0.0 || n.fract() != 0.0 || n > ((buf.len() - i) / 2) as f64 {
+            return Err("Invalid packed path length");
+        }
+        let n = n as usize;
+        let mut path = Vec::with_capacity(n);
+        for _ in 0..n {
+            let (x, y) = (buf[i], buf[i + 1]);
+            if !x.is_finite()
+                || !y.is_finite()
+                || x.fract() != 0.0
+                || y.fract() != 0.0
+                || x.abs() > 9_007_199_254_740_991.0
+                || y.abs() > 9_007_199_254_740_991.0
+            {
+                return Err("Coordinates must be finite safe integers");
+            }
+            path.push(Point64::new(x as i64, y as i64));
+            i += 2;
+        }
+        paths.push(path);
+    }
+    Ok(paths)
+}
+
+#[cfg(test)]
+mod triangulation_tests {
+    use super::*;
+
+    #[test]
+    fn packed_paths_round_trip_through_triangulation() {
+        let paths = vec![clipper2_rust::make_path64(&[
+            -209, 3155, 716, 3534, 3324, 2439, 298, 9844, 507, 6689,
+        ])];
+        let packed = encode_paths(&paths);
+        for delaunay in [false, true] {
+            let output = triangulate(&packed, delaunay).unwrap();
+            let triangles = decode_triangulation_paths(&output).unwrap();
+            assert_eq!(
+                triangles.iter().map(|t| area(t).abs()).sum::<f64>(),
+                9498178.0
+            );
+        }
+    }
+
+    #[test]
+    fn malformed_buffers_are_rejected() {
+        for buf in [
+            vec![f64::NAN],
+            vec![-1.0],
+            vec![0.5],
+            vec![3.0, 0.0, 0.0],
+            vec![1.0, f64::INFINITY, 0.0],
+            vec![1.0, 0.5, 0.0],
+            vec![1.0, 1e20, 0.0],
+        ] {
+            assert!(decode_triangulation_paths(&buf).is_err());
+        }
+    }
+}
