@@ -221,6 +221,46 @@ fn winding_and_y_mirroring() {
     }
 }
 
+#[test]
+fn collinear_vertices_with_either_winding() {
+    let cases = [
+        (
+            make_path64(&[
+                6000, 0, 8000, 6000, 4000, 4000, 0, 2000, 5000, 5000, 10000, 8000,
+            ]),
+            8000000.0,
+        ),
+        (
+            make_path64(&[0, 0, 2000, 4000, 3000, 3000, 5000, 1000]),
+            9000000.0,
+        ),
+    ];
+    for (path, expected) in cases {
+        let mut reversed = path.clone();
+        reversed.reverse();
+        check_area(&vec![path], expected);
+        check_area(&vec![reversed], expected);
+    }
+}
+
+#[test]
+fn spike_at_first_local_minimum_is_ignored() {
+    let path = make_path64(&[0, 0, 10, 0, 10, 10, 5, 10, 5, 20, 5, 10, 4, 2, 3, 10, 0, 10]);
+    check_area(&vec![path], 92.0);
+}
+
+#[test]
+fn horizontal_spike_at_path_closure_is_ignored() {
+    check_area(&vec![make_path64(&[4, 4, 0, 0, 8, 0, 4, 4, 2, 4])], 16.0);
+}
+
+// Union output at unit coordinates can retrace an edge because of rounding.
+#[test]
+fn retraced_edge_from_union_output_is_ignored() {
+    let path = make_path64(&[7, 4, 4, 1, 7, 2, 9, 3, 8, 3, 7, 3, 7, 4, 6, 4]);
+    check_area(&vec![path], 4.0);
+}
+
 #[cfg(feature = "using_z")]
 #[test]
 fn preserves_vertex_z_values() {

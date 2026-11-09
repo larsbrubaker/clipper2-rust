@@ -93,3 +93,36 @@ fn local_minimum_search_rejects_short_and_horizontal_paths() {
     // C++ selects index 3, at the left end of the bottom horizontal edge.
     assert_eq!(i, 3);
 }
+
+#[test]
+fn collinear_vertex_removal_leaves_only_real_corners() {
+    use crate::make_path64;
+    let square = make_path64(&[0, 0, 10, 0, 10, 10, 0, 10]);
+    for (input, expected) in [
+        // Collinear midpoints, including on the edge that closes the path.
+        (
+            make_path64(&[0, 0, 5, 0, 10, 0, 10, 5, 10, 10, 0, 10, 0, 5]),
+            square.clone(),
+        ),
+        // Repeated vertices, including the first vertex repeated at the end.
+        (
+            make_path64(&[0, 0, 0, 0, 10, 0, 10, 10, 10, 10, 0, 10, 0, 0]),
+            square.clone(),
+        ),
+        // A spike, whose removal leaves a repeated vertex behind.
+        (
+            make_path64(&[0, 0, 10, 0, 10, 10, 5, 10, 5, 20, 5, 10, 0, 10]),
+            square.clone(),
+        ),
+        // A spike at the point where the path closes.
+        (
+            make_path64(&[4, 4, 0, 0, 8, 0, 4, 4, 2, 4]),
+            make_path64(&[4, 4, 0, 0, 8, 0]),
+        ),
+        // Paths with no area collapse completely.
+        (make_path64(&[0, 0, 5, 5, 10, 10]), vec![]),
+        (make_path64(&[0, 0, 10, 0, 0, 0]), vec![]),
+    ] {
+        assert_eq!(remove_collinear_vertices(&input), expected);
+    }
+}

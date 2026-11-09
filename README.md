@@ -31,7 +31,7 @@ If you find it useful, here are a few ways to help keep development going:
 
 This port is **feature-complete** — all core algorithms have been ported and verified against the original C++ implementation.
 
-- **481 tests** (414 unit + 67 integration), all passing, 0 ignored; 502 with the `using_z` feature
+- **486 tests** (415 unit + 71 integration), all passing, 0 ignored; 507 with the `using_z` feature
 - **Exact behavioral match** with C++ on all test cases, including edge cases from 20+ GitHub issues
 - **5 examples** demonstrating clipping, offsetting, rectangle clipping, z-callbacks, and benchmarking
 - **6 Criterion benchmarks** covering boolean ops, offsetting, rect clipping, and simplification
@@ -204,7 +204,7 @@ cargo build
 
 ```bash
 cargo test                          # All tests
-cargo test --features using_z       # Adds the 20 using_z tests
+cargo test --features using_z       # Adds the 21 using_z tests
 cargo test --lib core_tests         # Specific module
 cargo test test_name -- --exact     # Specific test
 ```

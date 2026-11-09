@@ -190,6 +190,38 @@ fn segments_intersect(a: Point64, b: Point64, c: Point64, d: Point64) -> bool {
     }
 }
 
+// Remove repeated vertices, collinear vertices and spike tips, repeating until
+// the closed path has none, or nothing is left of it. C++ skips these while it
+// walks the path instead: a skip can jump over the closing vertex, so the walk
+// never ends, and a local minimum can be recorded twice, so reversed paths get
+// the wrong orientation. Without them `add_path` visits every index in turn.
+fn remove_collinear_vertices(path: &Path64) -> Path64 {
+    let mut kept: Path64 = Vec::with_capacity(path.len());
+    for &pt in path {
+        while kept.len() >= 2
+            && kept[kept.len() - 1] != pt
+            && cross_product_sign(kept[kept.len() - 2], kept[kept.len() - 1], pt) == 0
+        {
+            kept.pop();
+        }
+        if kept.last() != Some(&pt) {
+            kept.push(pt);
+        }
+    }
+    let mut first = 0;
+    while kept.len() - first >= 3 {
+        let last = kept.len() - 1;
+        if cross_product_sign(kept[last - 1], kept[last], kept[first]) == 0 {
+            kept.pop();
+        } else if cross_product_sign(kept[last], kept[first], kept[first + 1]) == 0 {
+            first += 1;
+        } else {
+            return kept.split_off(first);
+        }
+    }
+    Vec::new()
+}
+
 fn find_loc_min(path: &Path64, idx: &mut usize) -> bool {
     let len = path.len();
     if len < 3 {
@@ -892,35 +924,21 @@ impl Delaunay {
         Ok(result)
     }
     fn add_path(&mut self, path: &Path64) {
+        let path = &remove_collinear_vertices(path);
         let len = path.len();
         let mut i0 = 0;
         if !find_loc_min(path, &mut i0) {
             return;
         }
-        let mut prev = (i0 + len - 1) % len;
-        while path[prev] == path[i0] {
-            prev = (prev + len - 1) % len;
-        }
-        let mut next = (i0 + 1) % len;
-        let mut i = i0;
-        while cross_product_sign(path[prev], path[i], path[next]) == 0 {
-            find_loc_min(path, &mut i);
-            if i == i0 {
-                return;
-            }
-            prev = (i + len - 1) % len;
-            while path[prev] == path[i] {
-                prev = (prev + len - 1) % len;
-            }
-            next = (i + 1) % len;
-        }
         let start = self.vertices.len();
-        let v0 = self.add_vertex(path[i]);
-        if left_turn(path[prev], path[i], path[next]) {
+        let v0 = self.add_vertex(path[i0]);
+        let prev = (i0 + len - 1) % len;
+        let next = (i0 + 1) % len;
+        if left_turn(path[prev], path[i0], path[next]) {
             self.vertices[v0].inner_lm = true;
         }
         let mut v_prev = v0;
-        i = next;
+        let mut i = next;
         loop {
             self.minima.push(v_prev);
             if self.lowermost == NONE
@@ -930,21 +948,11 @@ impl Delaunay {
             {
                 self.lowermost = v_prev;
             }
-            next = (i + 1) % len;
-            if cross_product_sign(self.pt(v_prev), path[i], path[next]) == 0 {
-                i = next;
-                continue;
-            }
             while path[i].y <= self.pt(v_prev).y {
                 let v = self.add_vertex(path[i]);
                 self.create_edge(v_prev, v, EdgeKind::Ascend);
                 v_prev = v;
-                i = next;
-                next = (i + 1) % len;
-                while cross_product_sign(self.pt(v_prev), path[i], path[next]) == 0 {
-                    i = next;
-                    next = (i + 1) % len;
-                }
+                i = (i + 1) % len;
             }
             let mut v_prev_prev = v_prev;
             while i != i0 && path[i].y >= self.pt(v_prev).y {
@@ -952,12 +960,7 @@ impl Delaunay {
                 self.create_edge(v, v_prev, EdgeKind::Descend);
                 v_prev_prev = v_prev;
                 v_prev = v;
-                i = next;
-                next = (i + 1) % len;
-                while cross_product_sign(self.pt(v_prev), path[i], path[next]) == 0 {
-                    i = next;
-                    next = (i + 1) % len;
-                }
+                i = (i + 1) % len;
             }
             if i == i0 {
                 break;
