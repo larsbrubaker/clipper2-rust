@@ -25,13 +25,13 @@ If you find it useful, here are a few ways to help keep development going:
 
 [![Demo Screenshot](docs/demo-screenshot.png)](https://larsbrubaker.github.io/clipper2-rust/)
 
-8 interactive pages running entirely via WebAssembly: boolean operations, fill rules, path offsetting, rectangle clipping, Minkowski operations, path simplification, PolyTree visualization, and utilities. All shapes are draggable for real-time exploration.
+9 interactive pages running entirely via WebAssembly: boolean operations, fill rules, path offsetting, rectangle clipping, Minkowski operations, path simplification, PolyTree visualization, triangulation, and utilities. All shapes are draggable for real-time exploration.
 
 ## Status: Complete
 
 This port is **feature-complete** — all core algorithms have been ported and verified against the original C++ implementation.
 
-- **463 tests** (409 unit + 54 integration), all passing, 0 ignored; 483 with the `using_z` feature
+- **481 tests** (414 unit + 67 integration), all passing, 0 ignored; 502 with the `using_z` feature
 - **Exact behavioral match** with C++ on all test cases, including edge cases from 20+ GitHub issues
 - **5 examples** demonstrating clipping, offsetting, rectangle clipping, z-callbacks, and benchmarking
 - **6 Criterion benchmarks** covering boolean ops, offsetting, rect clipping, and simplification
@@ -52,6 +52,7 @@ This port was created by [MatterHackers](https://www.matterhackers.com) using [C
 - **Minkowski Sum/Difference**: Geometric Minkowski operations on polygons
 - **Path Simplification**: Reduce polygon complexity while preserving shape (Ramer-Douglas-Peucker)
 - **Multiple Precision**: Integer (`i64`) and floating-point (`f64`) coordinate support
+- **Triangulation**: Constrained triangulation with holes and optional Delaunay edge refinement
 - **PolyTree Structure**: Hierarchical representation of polygon parent/child/hole relationships
 - **Face Extraction**: `poly_tree_to_faces64` flattens a `PolyTree64` into `PolyFace64` solid faces, each owning its immediate holes
 - **Z Coordinates** (optional `using_z` feature): mirrors the C++ `USINGZ` build — adds a `z` field to points, z-callbacks on `Clipper64`/`ClipperD`/`ClipperOffset`, and z-preservation through clipping and offsetting
@@ -103,6 +104,28 @@ let union = clipper2_rust::union_64(&subject, &clip, FillRule::NonZero);
 let difference = clipper2_rust::difference_64(&subject, &clip, FillRule::NonZero);
 let xor = clipper2_rust::xor_64(&subject, &clip, FillRule::NonZero);
 ```
+
+### Triangulation
+
+```rust
+use clipper2_rust::{make_path64, triangulate_64, TriangulateResult};
+
+// Positive-area outer boundary, negative-area hole (Cartesian Y upward).
+let paths = vec![
+    make_path64(&[0, 0, 100, 0, 100, 100, 0, 100]),
+    make_path64(&[20, 20, 20, 80, 80, 80, 80, 20]),
+];
+let mut triangles = Vec::new();
+assert_eq!(
+    triangulate_64(&paths, &mut triangles, true),
+    TriangulateResult::Success,
+);
+```
+
+`triangulate_d` accepts floating-point paths with 0–8 decimal places of
+precision. Input paths must not self-intersect; resolve intersections with a
+boolean union first. The demo's Triangulation page includes both regression
+cases from [Clipper2 issue #12](https://github.com/PolyClipping/Clipper2/issues/12).
 
 ### Polygon Offsetting
 
@@ -180,7 +203,7 @@ cargo build
 ### Testing
 
 ```bash
-cargo test                          # All 463 tests
+cargo test                          # All tests
 cargo test --features using_z       # Adds the 20 using_z tests
 cargo test --lib core_tests         # Specific module
 cargo test test_name -- --exact     # Specific test

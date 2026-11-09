@@ -12,6 +12,7 @@ const demoModules: Record<string, () => Promise<{ init: DemoInit }>> = {
   'minkowski': () => import('./demos/minkowski.ts' as any),
   'simplify': () => import('./demos/simplify.ts' as any),
   'polytree': () => import('./demos/polytree.ts' as any),
+  'triangulation': () => import('./demos/triangulation.ts' as any),
   'utilities': () => import('./demos/utilities.ts' as any),
   'how-we-did-this': () => import('./demos/how-we-did-this.ts' as any),
 };
@@ -114,6 +115,11 @@ function renderHome(container: HTMLElement) {
           <span class="card-icon">&#9776;</span>
           <h3>PolyTree</h3>
           <p>Visualize hierarchical polygon results showing parent/child/hole relationships in a tree view.</p>
+        </a>
+        <a href="#/triangulation" class="feature-card">
+          <span class="card-icon">&#9651;</span>
+          <h3>Triangulation</h3>
+          <p>Constrained Delaunay triangles, holes, draggable vertices, and area comparisons.</p>
         </a>
         <a href="#/utilities" class="feature-card">
           <span class="card-icon">&#9881;</span>

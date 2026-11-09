@@ -11,6 +11,7 @@
 //! - **Polygon offsetting**: Inflate/deflate with Miter, Square, Bevel, and Round joins
 //! - **Rectangle clipping**: High-performance rectangular clipping
 //! - **Minkowski sum/difference**: Geometric Minkowski operations
+//! - **Triangulation**: Constrained Delaunay triangulation with holes
 //! - **Path simplification**: Ramer-Douglas-Peucker and Clipper2's simplification
 //! - **PolyTree**: Hierarchical parent/child/hole polygon representation
 //! - **Dual precision**: Integer (`i64`) and floating-point (`f64`) coordinate support
@@ -36,6 +37,7 @@ pub mod engine;
 pub mod engine_fns;
 pub mod engine_public;
 pub mod rectclip;
+pub mod triangulation;
 pub mod version;
 
 pub mod clipper;
@@ -51,6 +53,7 @@ pub use engine_public::*;
 pub use minkowski::*;
 pub use offset::*;
 pub use rectclip::*;
+pub use triangulation::*;
 pub use version::*;
 
 // Include using_z feature tests from separate file

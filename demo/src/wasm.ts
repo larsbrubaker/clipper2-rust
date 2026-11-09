@@ -198,3 +198,8 @@ export function polyTreeOp(
   const json = w.polytree_op(clipType, fillRule, encodePaths(subjects), encodePaths(clips));
   return JSON.parse(json);
 }
+
+/** Triangulate non-intersecting integer paths; holes have opposite winding. */
+export function triangulate(paths: number[][][], useDelaunay = true): number[][][] {
+  return decodePaths(getWasm().triangulate(encodePaths(paths), useDelaunay));
+}
