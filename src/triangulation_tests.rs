@@ -126,3 +126,66 @@ fn collinear_vertex_removal_leaves_only_real_corners() {
         assert_eq!(remove_collinear_vertices(&input), expected);
     }
 }
+
+#[test]
+fn touching_paths_become_simple_loops() {
+    use crate::make_path64;
+    let canonical = |paths: Paths64| {
+        let mut loops: Vec<Vec<(i64, i64)>> = paths
+            .into_iter()
+            .map(|p| {
+                let start = (0..p.len()).min_by_key(|&i| (p[i].x, p[i].y)).unwrap();
+                (0..p.len())
+                    .map(|i| p[(start + i) % p.len()])
+                    .map(|q| (q.x, q.y))
+                    .collect()
+            })
+            .collect();
+        loops.sort_unstable();
+        loops
+    };
+    // Paths with no contact only lose their degenerate vertices.
+    let separate = vec![make_path64(&[0, 0, 5, 0, 10, 0, 10, 10, 0, 10])];
+    assert_eq!(
+        resolve_touching_paths(&separate).0,
+        vec![make_path64(&[0, 0, 10, 0, 10, 10, 0, 10])]
+    );
+    // A vertex on another path's edge splits that edge. Nothing else changes.
+    assert_eq!(
+        canonical(
+            resolve_touching_paths(&vec![
+                make_path64(&[0, 0, 10, 0, 10, 10, 0, 10]),
+                make_path64(&[10, 5, 20, 0, 20, 10]),
+            ])
+            .0
+        ),
+        canonical(vec![
+            make_path64(&[0, 0, 10, 0, 10, 5, 10, 10, 0, 10]),
+            make_path64(&[10, 5, 20, 0, 20, 10]),
+        ])
+    );
+    // A path that revisits a point becomes two loops.
+    assert_eq!(
+        canonical(
+            resolve_touching_paths(&vec![make_path64(&[
+                0, 0, 4, 0, 4, 4, 8, 4, 8, 8, 4, 8, 4, 4, 0, 4,
+            ])])
+            .0
+        ),
+        canonical(vec![
+            make_path64(&[0, 0, 4, 0, 4, 4, 0, 4]),
+            make_path64(&[4, 4, 8, 4, 8, 8, 4, 8]),
+        ])
+    );
+    // Opposed edges cancel, joining the two squares that share them.
+    assert_eq!(
+        canonical(
+            resolve_touching_paths(&vec![
+                make_path64(&[0, 0, 4, 0, 4, 4, 0, 4]),
+                make_path64(&[4, 0, 8, 0, 8, 4, 4, 4]),
+            ])
+            .0
+        ),
+        canonical(vec![make_path64(&[0, 0, 4, 0, 8, 0, 8, 4, 4, 4, 0, 4])])
+    );
+}

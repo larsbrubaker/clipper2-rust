@@ -31,7 +31,7 @@ If you find it useful, here are a few ways to help keep development going:
 
 This port is **feature-complete** — all core algorithms have been ported and verified against the original C++ implementation.
 
-- **486 tests** (415 unit + 71 integration), all passing, 0 ignored; 507 with the `using_z` feature
+- **494 tests** (416 unit + 78 integration), all passing, 0 ignored; 515 with the `using_z` feature
 - **Exact behavioral match** with C++ on all test cases, including edge cases from 20+ GitHub issues
 - **5 examples** demonstrating clipping, offsetting, rectangle clipping, z-callbacks, and benchmarking
 - **6 Criterion benchmarks** covering boolean ops, offsetting, rect clipping, and simplification
