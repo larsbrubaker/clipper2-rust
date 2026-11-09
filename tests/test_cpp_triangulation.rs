@@ -221,6 +221,157 @@ fn winding_and_y_mirroring() {
     }
 }
 
+#[test]
+fn collinear_vertices_with_either_winding() {
+    let cases = [
+        (
+            make_path64(&[
+                6000, 0, 8000, 6000, 4000, 4000, 0, 2000, 5000, 5000, 10000, 8000,
+            ]),
+            8000000.0,
+        ),
+        (
+            make_path64(&[0, 0, 2000, 4000, 3000, 3000, 5000, 1000]),
+            9000000.0,
+        ),
+    ];
+    for (path, expected) in cases {
+        let mut reversed = path.clone();
+        reversed.reverse();
+        check_area(&vec![path], expected);
+        check_area(&vec![reversed], expected);
+    }
+}
+
+#[test]
+fn spike_at_first_local_minimum_is_ignored() {
+    let path = make_path64(&[0, 0, 10, 0, 10, 10, 5, 10, 5, 20, 5, 10, 4, 2, 3, 10, 0, 10]);
+    check_area(&vec![path], 92.0);
+}
+
+#[test]
+fn horizontal_spike_at_path_closure_is_ignored() {
+    check_area(&vec![make_path64(&[4, 4, 0, 0, 8, 0, 4, 4, 2, 4])], 16.0);
+}
+
+// Union output at unit coordinates can retrace an edge because of rounding.
+#[test]
+fn retraced_edge_from_union_output_is_ignored() {
+    let path = make_path64(&[7, 4, 4, 1, 7, 2, 9, 3, 8, 3, 7, 3, 7, 4, 6, 4]);
+    check_area(&vec![path], 4.0);
+}
+
+// The first path is a triangle with a unit-length edge, which is too small to
+// triangulate. One of its edges meets the second path within rounding tolerance.
+#[test]
+fn ignored_tiny_path_meeting_another_path() {
+    let paths = vec![
+        make_path64(&[1, 3, 2, 3, 1, 5, 1, 4]),
+        make_path64(&[2, 2, 4, 2, 2, 5, 2, 4, 1, 2]),
+    ];
+    for delaunay in [false, true] {
+        let mut triangles = vec![];
+        assert_eq!(
+            triangulate_64(&paths, &mut triangles, delaunay),
+            TriangulateResult::Success
+        );
+        assert_eq!(triangles.iter().map(area).sum::<f64>(), 4.5);
+    }
+}
+
+// A small triangle cut from a path that touches another is part of its area.
+#[test]
+fn small_loop_of_touching_path_is_kept() {
+    check_area(
+        &vec![
+            make_path64(&[3, 2, 2, 3, 0, 5, 2, 2]),
+            make_path64(&[4, 3, 4, 4, 2, 3, 3, 2]),
+        ],
+        3.5,
+    );
+}
+
+// C++ only checked edges for crossings against an inner minimum's connecting edge
+// when the edge lay inside that edge's x range, which fails when it heads right.
+#[test]
+fn inner_minimum_edge_avoids_edges_on_its_right() {
+    check_area(
+        &vec![make_path64(&[
+            744413, 460911, 582000, 563000, 675000, 699000, 483935, 477767, 486556, 455276, 566000,
+            496000, 729568, 441477,
+        ])],
+        14506790027.5,
+    );
+    check_area(
+        &vec![make_path64(&[
+            20000, 21000, 27000, 13000, 48939, 25683, 31000, 59000, 41790, 59378, 38000, 74000,
+            5000, 5000,
+        ])],
+        938833000.0,
+    );
+}
+
+// The vertex at (0, 3000) lies on the edge from (0, 4000) to (0, 2000).
+#[test]
+fn vertex_on_edge_of_same_path() {
+    check_area(
+        &vec![make_path64(&[
+            5000, 0, 0, 3000, 3000, 3000, 0, 4000, 0, 2000, 2000, 0,
+        ])],
+        7000000.0,
+    );
+}
+
+// The path passes through its lowest point twice, which decides its orientation.
+#[test]
+fn path_touching_itself_at_lowest_point() {
+    let mut path = make_path64(&[
+        3000, 1000, 3000, 2000, 5000, 5000, 3000, 3000, 2000, 3000, 5000, 5000, 5000, 2000, 4000,
+        1000,
+    ]);
+    check_area(&vec![path.clone()], 5500000.0);
+    path.reverse();
+    check_area(&vec![path], 5500000.0);
+}
+
+// Edges traced in opposite directions by two paths bound nothing: the area on
+// both sides of them is either filled (first case) or empty (second case).
+#[test]
+fn edges_shared_in_opposite_directions_cancel() {
+    check_area(
+        &vec![
+            make_path64(&[10000, 12000, 10000, 13000, 10000, 19000, 2000, 2000]),
+            make_path64(&[10000, 7000, 13000, 7000, 10000, 13000]),
+        ],
+        37000000.0,
+    );
+    check_area(
+        &vec![
+            make_path64(&[4000, 5000, 0, 5000, 2333, 2666, 2000, 4000, 3000, 2000]),
+            make_path64(&[3000, 2000, 2000, 4000, 2333, 2666]),
+        ],
+        6001500.0,
+    );
+}
+
+// At (2000, 10000) a lobe sits in the notch of a reflex vertex. The area below
+// that point is filled, so it still needs a connecting edge.
+#[test]
+fn lobe_touching_reflex_vertex_keeps_area_below() {
+    check_area(
+        &vec![
+            make_path64(&[
+                2000, 10000, 2000, 6000, 6571, 4857, 5200, 7600, 2000, 10000, 5058, 7882, 0, 18000,
+                1000, 3000,
+            ]),
+            make_path64(&[
+                5058, 7882, 5200, 7600, 10000, 4000, 6571, 4857, 8000, 2000, 15000, 1000,
+            ]),
+        ],
+        47998800.0,
+    );
+}
+
 #[cfg(feature = "using_z")]
 #[test]
 fn preserves_vertex_z_values() {

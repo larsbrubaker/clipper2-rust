@@ -4,13 +4,16 @@
 //!
 //! Uses index arenas instead of C++ pointers, with the same sweep, intersection
 //! repair, and optional Delaunay edge flips. New edges stop at or avoid live
-//! vertices on their interiors, preventing overlapping triangles.
+//! vertices on their interiors, preventing overlapping triangles. Paths that
+//! touch themselves or each other are first rewritten as simple loops.
 //!
 //! Outer paths must have positive signed area and holes negative signed area
 //! (CCW outers / CW holes in Cartesian coordinates). Reversing all paths is
 //! supported. Self-intersecting paths should first be resolved with `union`.
 
-use crate::core::{cross_product_sign, scale_paths_uniform, sqr, Path64, Paths64, PathsD, Point64};
+use crate::core::{
+    area, cross_product_sign, scale_paths_uniform, sqr, Path64, Paths64, PathsD, Point64,
+};
 
 /// Outcome of triangulation, matching the C++ `TriangulateResult` values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -105,7 +108,6 @@ struct Delaunay {
     pending: Vec<usize>,
     horizontals: Vec<usize>,
     minima: Vec<usize>,
-    lowermost: usize,
     first_active: usize,
     use_delaunay: bool,
 }
@@ -190,6 +192,122 @@ fn segments_intersect(a: Point64, b: Point64, c: Point64, d: Point64) -> bool {
     }
 }
 
+// Remove repeated vertices, collinear vertices and spike tips, repeating until
+// the closed path has none, or nothing is left of it. C++ skips these while it
+// walks the path instead: a skip can jump over the closing vertex, so the walk
+// never ends, and a local minimum can be recorded twice, so reversed paths get
+// the wrong orientation. Without them `add_path` visits every index in turn.
+fn remove_collinear_vertices(path: &Path64) -> Path64 {
+    let mut kept: Path64 = Vec::with_capacity(path.len());
+    for &pt in path {
+        while kept.len() >= 2
+            && kept[kept.len() - 1] != pt
+            && cross_product_sign(kept[kept.len() - 2], kept[kept.len() - 1], pt) == 0
+        {
+            kept.pop();
+        }
+        if kept.last() != Some(&pt) {
+            kept.push(pt);
+        }
+    }
+    let mut first = 0;
+    while kept.len() - first >= 3 {
+        let last = kept.len() - 1;
+        if cross_product_sign(kept[last - 1], kept[last], kept[first]) == 0 {
+            kept.pop();
+        } else if cross_product_sign(kept[last], kept[first], kept[first + 1]) == 0 {
+            first += 1;
+        } else {
+            return kept.split_off(first);
+        }
+    }
+    Vec::new()
+}
+
+// Record the directed edge a->b, unless b->a is already recorded. Edges traced
+// in opposite directions bound nothing: the two sides are either both filled or
+// both empty. Returns whether the pair cancelled.
+fn add_directed_edge(next: &mut [Vec<usize>], a: usize, b: usize) -> bool {
+    if let Some(i) = next[b].iter().position(|&v| v == a) {
+        next[b].swap_remove(i);
+        true
+    } else {
+        next[a].push(b);
+        false
+    }
+}
+
+// Rewrite paths that touch as simple loops, which the sweep can walk. A vertex
+// on another edge splits that edge, opposed edges cancel, and a path that
+// revisits a point becomes one loop per visit. Paths with no such contact are
+// only cleaned of degenerate vertices. Also returns whether any paths touched.
+fn resolve_touching_paths(paths: &Paths64) -> (Paths64, bool) {
+    let cleaned: Paths64 = paths.iter().map(remove_collinear_vertices).collect();
+    let mut points: Path64 = cleaned.iter().flatten().copied().collect();
+    points.sort_unstable_by_key(|p| (p.x, p.y));
+    points.dedup();
+    let index = |p: Point64| points.partition_point(|q| (q.x, q.y) < (p.x, p.y));
+    let mut next: Vec<Vec<usize>> = vec![Vec::new(); points.len()];
+    let mut visited_by = vec![NONE; points.len()];
+    let mut touching = false;
+    for (path_no, path) in cleaned.iter().enumerate() {
+        for (i, &a) in path.iter().enumerate() {
+            let b = path[(i + 1) % path.len()];
+            let mut from = index(a);
+            touching |= visited_by[from] == path_no;
+            visited_by[from] = path_no;
+            let first = points.partition_point(|p| p.x < a.x.min(b.x));
+            let last = points.partition_point(|p| p.x <= a.x.max(b.x));
+            let mut on_edge: Path64 = points[first..last]
+                .iter()
+                .copied()
+                .filter(|&v| on_segment_interior(a, b, v))
+                .collect();
+            on_edge.sort_unstable_by_key(|v| (v.x.abs_diff(a.x), v.y.abs_diff(a.y)));
+            touching |= !on_edge.is_empty();
+            for v in on_edge {
+                let v = index(v);
+                touching |= add_directed_edge(&mut next, from, v);
+                from = v;
+            }
+            touching |= add_directed_edge(&mut next, from, index(b));
+        }
+    }
+    if !touching {
+        return (cleaned, false);
+    }
+    // Every point has as many edges in as out, so each walk ends where it began.
+    let mut loops = Paths64::new();
+    let mut stack_pos = vec![NONE; points.len()];
+    for start in 0..points.len() {
+        while let Some(first) = next[start].pop() {
+            let mut stack = vec![start];
+            stack_pos[start] = 0;
+            let mut v = first;
+            loop {
+                if stack_pos[v] == NONE {
+                    stack_pos[v] = stack.len();
+                    stack.push(v);
+                } else {
+                    let tail = stack.split_off(stack_pos[v] + 1);
+                    let mut simple_loop = vec![points[v]];
+                    for u in tail {
+                        stack_pos[u] = NONE;
+                        simple_loop.push(points[u]);
+                    }
+                    loops.push(simple_loop);
+                }
+                match next[v].pop() {
+                    Some(n) => v = n,
+                    None => break,
+                }
+            }
+            stack_pos[start] = NONE;
+        }
+    }
+    (loops, true)
+}
+
 fn find_loc_min(path: &Path64, idx: &mut usize) -> bool {
     let len = path.len();
     if len < 3 {
@@ -222,7 +340,6 @@ impl Delaunay {
             pending: vec![],
             horizontals: vec![],
             minima: vec![],
-            lowermost: NONE,
             first_active: NONE,
             use_delaunay,
         }
@@ -461,6 +578,12 @@ impl Delaunay {
             return false;
         }
         let v2 = self.edges[tmp].vt;
+        // An ignored path's edges stay listed but are unlinked from their
+        // vertices and never swept, so there is nothing to shorten. C++ throws
+        // here. Edges of other paths may still be split at its vertices.
+        if !self.vertices[v2].edges.contains(&tmp) {
+            return true;
+        }
         self.remove_edge_from_vertex(v2, tmp);
         if self.edges[tmp].vl == v2 {
             self.edges[tmp].vl = v;
@@ -520,6 +643,25 @@ impl Delaunay {
         self.vertices[new].edges.push(long);
         self.create_edge(new, old, self.edges[long].kind);
     }
+    // When every edge at a merged vertex rises from it, the area below the vertex
+    // is filled only if the leftmost edge fills on its left.
+    fn filled_below_merged_vertex(&self, v: usize) -> bool {
+        let p = self.pt(v);
+        let mut leftmost = NONE;
+        let mut leftmost_pt = p;
+        for &e in &self.vertices[v].edges {
+            let edge = &self.edges[e];
+            let q = self.pt(if edge.vb == v { edge.vt } else { edge.vb });
+            if q.y >= p.y {
+                return false;
+            }
+            if leftmost == NONE || right_turn(leftmost_pt, p, q) {
+                leftmost = e;
+                leftmost_pt = q;
+            }
+        }
+        leftmost != NONE && self.edges[leftmost].kind == EdgeKind::Descend
+    }
     fn merge_duplicates(&mut self) {
         let mut v1 = self.vertex_order[0];
         for i in 1..self.vertex_order.len() {
@@ -527,9 +669,6 @@ impl Delaunay {
             if self.pt(v1) != self.pt(v2) {
                 v1 = v2;
                 continue;
-            }
-            if !self.vertices[v1].inner_lm || !self.vertices[v2].inner_lm {
-                self.vertices[v1].inner_lm = false;
             }
             let edges = std::mem::take(&mut self.vertices[v2].edges);
             for &e in &edges {
@@ -545,6 +684,7 @@ impl Delaunay {
                 }
             }
             self.vertices[v1].edges.extend(edges);
+            self.vertices[v1].inner_lm = self.filled_below_merged_vertex(v1);
             let len = self.vertices[v1].edges.len();
             for j in 0..len {
                 let e1 = self.vertices[v1].edges[j];
@@ -610,7 +750,7 @@ impl Delaunay {
             let in_x = if left {
                 self.pt(edge.vr).x > best_pt.x && self.pt(edge.vl).x < p.x
             } else {
-                self.pt(edge.vr).x < best_pt.x && self.pt(edge.vl).x > p.x
+                self.pt(edge.vl).x < best_pt.x && self.pt(edge.vr).x > p.x
             };
             if in_x
                 && self.pt(edge.vb).y > p.y
@@ -760,35 +900,27 @@ impl Delaunay {
         }
     }
     fn execute(&mut self, paths: &Paths64) -> Result<Paths64, TriangulateResult> {
+        let (mut paths, touching) = resolve_touching_paths(paths);
+        // Holes lie inside outer paths, so the outer paths' sign wins the sum.
+        if paths.iter().map(area).sum::<f64>() < 0.0 {
+            paths.iter_mut().for_each(|p| p.reverse());
+        }
         let count = paths.iter().map(Vec::len).sum();
         self.vertices.reserve(count);
         self.edges.reserve(count);
-        for p in paths {
-            self.add_path(p);
+        for p in &paths {
+            self.add_path(p, touching);
         }
         if self.vertices.len() < 3 {
             return Err(TriangulateResult::NoPolygons);
         }
-        if self.vertices[self.lowermost].inner_lm {
-            while let Some(v) = self.minima.pop() {
-                self.vertices[v].inner_lm = !self.vertices[v].inner_lm;
-            }
-            for edge in &mut self.edges {
-                edge.kind = if edge.kind == EdgeKind::Ascend {
-                    EdgeKind::Descend
-                } else {
-                    EdgeKind::Ascend
-                };
-            }
-        } else {
-            self.minima.clear();
-        }
+        // Stable sorts keep ties in creation order, so C++ and Rust build the same mesh.
         self.edge_order
-            .sort_unstable_by_key(|&e| self.vertices[self.edges[e].vl].pt.x);
+            .sort_by_key(|&e| self.vertices[self.edges[e].vl].pt.x);
         if !self.fixup_edge_intersects() {
             return Err(TriangulateResult::PathsIntersect);
         }
-        self.vertex_order.sort_unstable_by(|&a, &b| {
+        self.vertex_order.sort_by(|&a, &b| {
             let a = self.vertices[a].pt;
             let b = self.vertices[b].pt;
             b.y.cmp(&a.y).then_with(|| a.x.cmp(&b.x))
@@ -816,10 +948,9 @@ impl Delaunay {
                             self.do_triangulate(e, bottom, curr_y, false);
                         }
                     }
-                    let es = &self.vertices[lm].edges;
-                    let (a, b) = (es[0], es[1]);
-                    self.add_active(a);
-                    self.add_active(b);
+                    for k in 0..self.vertices[lm].edges.len() {
+                        self.add_active(self.vertices[lm].edges[k]);
+                    }
                 }
                 while let Some(e) = self.horizontals.pop() {
                     if self.completed(e) {
@@ -891,60 +1022,29 @@ impl Delaunay {
         }
         Ok(result)
     }
-    fn add_path(&mut self, path: &Path64) {
+    // `keep_small` keeps a small triangle cut from a larger path that touched
+    // another path, as it is part of that path's area and not a stray sliver.
+    fn add_path(&mut self, path: &Path64, keep_small: bool) {
         let len = path.len();
         let mut i0 = 0;
         if !find_loc_min(path, &mut i0) {
             return;
         }
-        let mut prev = (i0 + len - 1) % len;
-        while path[prev] == path[i0] {
-            prev = (prev + len - 1) % len;
-        }
-        let mut next = (i0 + 1) % len;
-        let mut i = i0;
-        while cross_product_sign(path[prev], path[i], path[next]) == 0 {
-            find_loc_min(path, &mut i);
-            if i == i0 {
-                return;
-            }
-            prev = (i + len - 1) % len;
-            while path[prev] == path[i] {
-                prev = (prev + len - 1) % len;
-            }
-            next = (i + 1) % len;
-        }
         let start = self.vertices.len();
-        let v0 = self.add_vertex(path[i]);
-        if left_turn(path[prev], path[i], path[next]) {
+        let v0 = self.add_vertex(path[i0]);
+        let prev = (i0 + len - 1) % len;
+        let next = (i0 + 1) % len;
+        if left_turn(path[prev], path[i0], path[next]) {
             self.vertices[v0].inner_lm = true;
         }
         let mut v_prev = v0;
-        i = next;
+        let mut i = next;
         loop {
-            self.minima.push(v_prev);
-            if self.lowermost == NONE
-                || self.pt(v_prev).y > self.pt(self.lowermost).y
-                || (self.pt(v_prev).y == self.pt(self.lowermost).y
-                    && self.pt(v_prev).x < self.pt(self.lowermost).x)
-            {
-                self.lowermost = v_prev;
-            }
-            next = (i + 1) % len;
-            if cross_product_sign(self.pt(v_prev), path[i], path[next]) == 0 {
-                i = next;
-                continue;
-            }
             while path[i].y <= self.pt(v_prev).y {
                 let v = self.add_vertex(path[i]);
                 self.create_edge(v_prev, v, EdgeKind::Ascend);
                 v_prev = v;
-                i = next;
-                next = (i + 1) % len;
-                while cross_product_sign(self.pt(v_prev), path[i], path[next]) == 0 {
-                    i = next;
-                    next = (i + 1) % len;
-                }
+                i = (i + 1) % len;
             }
             let mut v_prev_prev = v_prev;
             while i != i0 && path[i].y >= self.pt(v_prev).y {
@@ -952,12 +1052,7 @@ impl Delaunay {
                 self.create_edge(v, v_prev, EdgeKind::Descend);
                 v_prev_prev = v_prev;
                 v_prev = v;
-                i = next;
-                next = (i + 1) % len;
-                while cross_product_sign(self.pt(v_prev), path[i], path[next]) == 0 {
-                    i = next;
-                    next = (i + 1) % len;
-                }
+                i = (i + 1) % len;
             }
             if i == i0 {
                 break;
@@ -968,11 +1063,12 @@ impl Delaunay {
         }
         self.create_edge(v0, v_prev, EdgeKind::Descend);
         let count = self.vertices.len() - start;
-        if count < 3
-            || (count == 3
-                && (squared_distance(self.pt(start), self.pt(start + 1)) <= 1.0
-                    || squared_distance(self.pt(start + 1), self.pt(start + 2)) <= 1.0
-                    || squared_distance(self.pt(start + 2), self.pt(start)) <= 1.0))
+        if !keep_small
+            && (count < 3
+                || (count == 3
+                    && (squared_distance(self.pt(start), self.pt(start + 1)) <= 1.0
+                        || squared_distance(self.pt(start + 1), self.pt(start + 2)) <= 1.0
+                        || squared_distance(self.pt(start + 2), self.pt(start)) <= 1.0)))
         {
             for v in &mut self.vertices[start..] {
                 v.edges.clear();
