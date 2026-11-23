@@ -1,0 +1,54 @@
+# Publishes clipper2-rust to crates.io from GitHub's network, run by hand (Actions > publish >
+# Run workflow). Same route as agg-rust's, tess2-rust's and agg-gui's publish workflows:
+# publishing from CI keeps the token off the development machine.
+#
+# Before running it:
+#   - Bump `version` in Cargo.toml and commit it to main; crates.io never accepts the same
+#     version twice, and the first step fails fast if this version is already published.
+#   - The repository secret CARGO_REGISTRY_TOKEN must hold a current crates.io API token with
+#     the publish-update scope for clipper2-rust, set or rotated with
+#       gh secret set CARGO_REGISTRY_TOKEN --repo larsbrubaker/clipper2-rust
+#
+# It runs only from main, with read-only repository permissions, and runs the test suite in
+# release for each feature set CI covers before publishing. Tag the release (vX.Y.Z) afterwards.
+name: publish
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the version is not on crates.io yet
+        run: |
+          version=$(sed -n 's/^version *= *"\(.*\)"/\1/p' Cargo.toml | head -n 1)
+          [ -n "$version" ] || { echo "no version in Cargo.toml" >&2; exit 1; }
+          url="https://crates.io/api/v1/crates/clipper2-rust/$version"
+          status=$(curl -sS -o /dev/null -w '%{http_code}' \
+            -A "clipper2-rust publish workflow (github.com/larsbrubaker/clipper2-rust)" "$url")
+          case "$status" in
+            404) echo "clipper2-rust $version is not on crates.io yet: publishing" ;;
+            200) echo "clipper2-rust $version is already on crates.io: bump version in Cargo.toml" >&2; exit 1 ;;
+            *) echo "unexpected HTTP $status from $url" >&2; exit 1 ;;
+          esac
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo test
+        run: cargo test --release
+      - name: cargo test (using_z)
+        run: cargo test --release --features using_z
+      - name: cargo test (geo, using_z)
+        run: cargo test --release --features geo,using_z
+      - name: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p clipper2-rust
