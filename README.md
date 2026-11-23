@@ -56,6 +56,7 @@ This port was created by [MatterHackers](https://www.matterhackers.com) using [C
 - **PolyTree Structure**: Hierarchical representation of polygon parent/child/hole relationships
 - **Face Extraction**: `poly_tree_to_faces64` flattens a `PolyTree64` into `PolyFace64` solid faces, each owning its immediate holes
 - **Z Coordinates** (optional `using_z` feature): mirrors the C++ `USINGZ` build — adds a `z` field to points, z-callbacks on `Clipper64`/`ClipperD`/`ClipperOffset`, and z-preservation through clipping and offsetting
+- **geo Interop** (optional `geo` feature): converts `geo-types` coordinates, line strings, polygons and multi polygons to Clipper paths, and `PolyTree64`/`PolyTreeD` results back to a `MultiPolygon` with holes assigned. See the `clipper2_rust::geo` module docs
 - **SVG Output**: Built-in SVG writer for visualization and debugging
 - **100% Safe Rust**: Zero `unsafe` blocks — enforced at compile time with `#![forbid(unsafe_code)]`
 

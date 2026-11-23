@@ -40,6 +40,9 @@ pub mod rectclip;
 pub mod triangulation;
 pub mod version;
 
+#[cfg(feature = "geo")]
+pub mod geo;
+
 pub mod clipper;
 pub mod minkowski;
 pub mod offset;

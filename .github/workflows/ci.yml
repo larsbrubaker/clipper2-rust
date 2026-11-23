@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-26.04, windows-latest]
-        flags: ["", "--features using_z"]
+        flags: ["", "--features using_z", "--features geo", "--features geo,using_z"]
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -41,3 +41,5 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
       - name: Clippy (using_z)
         run: cargo clippy --all-targets --features using_z -- -D warnings
+      - name: Clippy (geo)
+        run: cargo clippy --all-targets --features geo,using_z -- -D warnings
