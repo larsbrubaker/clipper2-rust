@@ -1,11 +1,11 @@
 /*******************************************************************************
-* Author    :  Angus Johnson (original C++), Rust port                        *
-* Date      :  2025                                                           *
-* Website   :  https://www.angusj.com                                         *
-* Copyright :  Angus Johnson 2010-2025                                        *
-* Purpose   :  Path Offset (Inflate/Shrink)                                   *
-* License   :  https://www.boost.org/LICENSE_1_0.txt                          *
-*******************************************************************************/
+ * Author    :  Angus Johnson (original C++), Rust port                        *
+ * Date      :  2025                                                           *
+ * Website   :  https://www.angusj.com                                         *
+ * Copyright :  Angus Johnson 2010-2025                                        *
+ * Purpose   :  Path Offset (Inflate/Shrink)                                   *
+ * License   :  https://www.boost.org/LICENSE_1_0.txt                          *
+ *******************************************************************************/
 
 //! Path offset (inflate/shrink) module.
 //!

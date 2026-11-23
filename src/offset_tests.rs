@@ -1,9 +1,9 @@
 /*******************************************************************************
-* Comprehensive tests for the offset module                                   *
-* Direct port of C++ test cases from TestOffsets.cpp and                       *
-* TestOffsetOrientation.cpp                                                   *
-* Date: 2025                                                                  *
-*******************************************************************************/
+ * Comprehensive tests for the offset module                                   *
+ * Direct port of C++ test cases from TestOffsets.cpp and                       *
+ * TestOffsetOrientation.cpp                                                   *
+ * Date: 2025                                                                  *
+ *******************************************************************************/
 
 use crate::core::{area, constants, Path64, Paths64, Point64};
 use crate::offset::{ClipperOffset, EndType, JoinType};

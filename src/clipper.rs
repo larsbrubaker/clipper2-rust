@@ -1,11 +1,11 @@
 /*******************************************************************************
-* Author    :  Angus Johnson (original C++), Rust port                        *
-* Date      :  2025                                                           *
-* Website   :  https://www.angusj.com                                         *
-* Copyright :  Angus Johnson 2010-2025                                        *
-* Purpose   :  Simple public API for the Clipper Library                      *
-* License   :  https://www.boost.org/LICENSE_1_0.txt                          *
-*******************************************************************************/
+ * Author    :  Angus Johnson (original C++), Rust port                        *
+ * Date      :  2025                                                           *
+ * Website   :  https://www.angusj.com                                         *
+ * Copyright :  Angus Johnson 2010-2025                                        *
+ * Purpose   :  Simple public API for the Clipper Library                      *
+ * License   :  https://www.boost.org/LICENSE_1_0.txt                          *
+ *******************************************************************************/
 
 //! Public API convenience functions for the Clipper2 library.
 //!

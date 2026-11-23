@@ -407,11 +407,7 @@ pub fn save_test(
         }
     }
 
-    if writeln!(file).is_err() {
-        return false;
-    }
-
-    true
+    writeln!(file).is_ok()
 }
 
 #[cfg(test)]

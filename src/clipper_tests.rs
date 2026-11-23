@@ -1,7 +1,7 @@
 /*******************************************************************************
-* Comprehensive tests for the public API convenience functions                *
-* Date: 2025                                                                  *
-*******************************************************************************/
+ * Comprehensive tests for the public API convenience functions                *
+ * Date: 2025                                                                  *
+ *******************************************************************************/
 
 use crate::clipper::*;
 use crate::core::{area, Path64, PathD, Paths64, Point, Point64, Rect64, RectD};
